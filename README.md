@@ -1,5 +1,6 @@
 # tomoproc
-This repository provide necessary toolkits for the pre&amp;post processing of tomography data collected at
+
+This repository, __tomoproc__ provides necessary toolkits for the pre&amp;post processing of tomography data collected at
 
 * 1-ID@APS
 * 6-BM-A@APS
