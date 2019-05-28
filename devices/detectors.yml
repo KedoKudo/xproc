@@ -1,0 +1,29 @@
+# This file contains hardware information for detectors used at MPE@XSD.APS,
+# including:
+#  1-ID-A|B|C|E
+#  6-BM-A
+#  6-ID-D
+
+ge:
+  resolution: 
+    - 2048  # row
+    - 2048  # col
+  pixel_size:
+    - 200   # µm
+    - 200   # µm
+
+dexela:
+  resolution:
+    - 3048  # row
+    - 4012  # col
+  pixel_size:
+    - 200   # µm
+    - 200   # µm
+
+pointgray:
+  resolution:
+    - 2048
+    - 2048
+  pixel_size:
+    - 200
+    - 200
