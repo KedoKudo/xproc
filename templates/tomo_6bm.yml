@@ -27,3 +27,12 @@ output:
   filepath:    '/dev/shm/tmp'    # use testing location
   fileprefix:  'test'       # specify file name
   type:        'hdf5'       # [tiff|tif, hdf|hdf1|hdf5]
+
+reconstruction:
+  impulse_noise_removal:     true    # reduce impulse noise with selective median filtering
+  background_normalization:  true    # normalize backbround with fiber normalization of sinogram
+  auto_crop:                 true    # auto detect slit and perfrom cropping
+  perform_stitching:         flase   # stich multiple tomo scan into a single large scan
+  stitching_config:                  # only useful if perform_stiching is ture
+    slice_number:            2       # 
+    offset:                  10      # 
