@@ -3,6 +3,8 @@ tomoPre
 
 Preprocessing python function before tomo reconstruction
 
+https://github.com/kyueaes/tomoPre
+
 Features
 ============
 
