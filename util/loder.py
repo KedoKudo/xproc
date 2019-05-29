@@ -6,9 +6,8 @@ Common file loader functions.
 """
 
 import yaml
-
-from tomoproc.util.logger import log_exception
-from tomoproc.util.logger import logger_default
+from   tomoproc.util.logger import log_exception
+from   tomoproc.util.logger import logger_default
 
 
 @log_exception(logger_default)
