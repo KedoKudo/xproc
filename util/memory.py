@@ -14,7 +14,7 @@ For example:
 True
 """
 
-import psutil 
+import psutil
 import numpy  as np
 
 
