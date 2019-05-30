@@ -41,6 +41,9 @@ reconstruction:
 # This is an OPTIONAL block, only useful for converting legacy format
 # e.g.
 #  example_{num}.tiff --> example.h5
+# NOTE:
+#   the file_path need to be an absolute path to the location of the testing
+#   files
 molt:
   file_path:   '/Users/chenzhang/Documents/Workbench/tomoproc/examples/molting'
   file_prefix: 'PUP_FF_SOFC_hires3_S2'
