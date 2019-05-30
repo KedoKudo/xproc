@@ -11,3 +11,4 @@ This repository, __tomoproc__ provides necessary toolkits for the pre&amp;post p
 * __tomopy__: conda install -c conda-forge tomopy
 * __tifffile__:  pip install tifffile
 * __docopt__: pip install docopt
+* __vtk__: pip install vtk
