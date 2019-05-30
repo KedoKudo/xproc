@@ -35,20 +35,20 @@ def write_yaml(fname: str, data: dict) -> None:
 def write_h5(fname: str, data: dict) -> None:
     """generic simper HDF5 archive writer"""
     with h5py.File(fname, 'w') as f:
-        recursively_save_dict_contents_to_group(f,'/',data)
+        recursive_save_dict_to_h5group(f,'/',data)
 
 
 @log_exception(logger_default)
 def load_h5(fname: str, path: str='/') -> dict:
     """generic simple HDF5 archive loader"""
     with h5py.File(fname, 'r') as f:
-        dataMap = recursively_load_dict_contents_from_group(f, path)
+        dataMap = recursive_load_h5group_to_dict(f, path)
     return dataMap
 
 
 @log_exception(logger_default)
-def recursively_load_dict_contents_from_group(h5file: "h5py.File", 
-                                              path: str,
+def recursive_load_h5group_to_dict(h5file: "h5py.File", 
+                                path: str,
         ) -> dict:
     """recursively load data from HDF5 archive as dict"""
     ans = {}
@@ -56,21 +56,21 @@ def recursively_load_dict_contents_from_group(h5file: "h5py.File",
         if isinstance(item, h5py._hl.dataset.Dataset):
             ans[key] = item.value
         elif isinstance(item, h5py._hl.group.Group):
-            ans[key] = recursively_load_dict_contents_from_group(h5file, f"{path}{key}/")
+            ans[key] = recursive_load_h5group_to_dict(h5file, f"{path}{key}/")
     return ans
 
 
 @log_exception(logger_default)
-def recursively_save_dict_contents_to_group(h5file: "h5py.File", 
-                                            path: str, 
-                                            dic: dict,
+def recursive_save_dict_to_h5group(h5file: "h5py.File", 
+                                   path: str, 
+                                   dic: dict,
         ) -> None:
     """recursively write data to HDF5 archive"""
     for key, item in dic.items():
         if isinstance(item, (np.ndarray, np.int64, np.float64, str, bytes,int,float,np.bool_)):
             h5file[path + key] = item
         elif isinstance(item, dict):
-            recursively_save_dict_contents_to_group(h5file, path + key + '/', item)
+            recursive_save_dict_to_h5group(h5file, path + key + '/', item)
         else:
             raise ValueError(f'Cannot save {item} type')
 
