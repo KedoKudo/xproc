@@ -65,7 +65,6 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
             'back_dark'  : '/exchange/data_white_dark',
             }.items():
             _nimgs = np.arange(cfg[k][0], cfg[k][1] + 1)
-            print(len(_nimgs), _nrow, _ncol)
             _dst = h5f.create_dataset(v, (len(_nimgs), _nrow, _ncol), dtype=_dtype)
             for idx, n in enumerate(_nimgs):
                 _fn = f"{fnpre}_{str(n).zfill(_padding)}.{ffmt}"
