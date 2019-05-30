@@ -9,3 +9,4 @@ This repository, __tomoproc__ provides necessary toolkits for the pre&amp;post p
 ## Required 3rd-party libraries
 
 * __tomopy__: conda install -c conda-forge tomopy
+* __tifffile__:  pip install tifffile
