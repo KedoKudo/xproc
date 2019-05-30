@@ -224,6 +224,35 @@ def calc_affine_transform(pts_source: np.ndarray,
     return scipy.linalg.lstsq(pad(pts_source), pad(pts_target))[0].T
 
 
+@log_exception(logger_default)
+def selective_medfilt2d(
+        image: np.ndarray, 
+        kernel_size: int=3,
+        threshold: float=0.5,
+    ) -> np.ndarray:
+    """
+    Description
+    -----------
+        Selective 2D median filter using scipy.signal.medfilt2d as backend
+
+    Parameters
+    ----------
+    image: np.ndarray
+        2D image
+    kernel_size: int
+        2D median filter size, larger kernel size often requires more time
+    threshold: float
+        threshold of relative change to decide whether to keep raw data or use
+        median filtered pixel
+
+    Returns
+    -------
+    np.ndarray:
+        Resulting 2D image
+    """
+    pass
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
