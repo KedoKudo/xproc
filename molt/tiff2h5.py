@@ -16,7 +16,7 @@ from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
 
 
-# @log_exception(logger_default)
+@log_exception(logger_default)
 def pack_tiff_to_hdf5(fconfig:  str) -> None:
     """
     Description
