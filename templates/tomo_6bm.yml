@@ -25,8 +25,8 @@ tomo:
 
 output:        
   filepath:    '/dev/shm/tmp'    # use testing location
-  fileprefix:  'test'       # specify file name
-  type:        'hdf5'       # [tiff|tif, hdf|hdf1|hdf5]
+  fileprefix:  'test'            # specify file name
+  type:        'hdf5'            # [tiff|tif, hdf|hdf1|hdf5]
 
 reconstruction:
   impulse_noise_removal:     true    # reduce impulse noise with selective median filtering
@@ -36,3 +36,25 @@ reconstruction:
   stitching_config:                  # only useful if perform_stiching is ture
     slice_number:            2       # 
     offset:                  10      # 
+
+
+# This is an OPTIONAL block, only useful for converting legacy format
+# e.g.
+#  example_{num}.tiff --> example.h5
+molt:
+  file_path:   '/tmp/test/'
+  file_prefix: 'example'
+  file_format: 'tiff'
+  numpadding:  6
+  front_white:
+    - 1               # starting file, e.g. /tmp/test/example_000001.tiff
+    - 5               # ending file, e.g. /tmp/test/example_000005.tiff
+  projections:
+    - 5
+    - 42
+  back_white:
+    - 43
+    - 48
+  back_dark:
+    - 49
+    - 54
