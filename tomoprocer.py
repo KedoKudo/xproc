@@ -2,6 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """tomoprocer
+    molt: legacy data support
+        convert tiff|binary to HDF5 archive for subsequent analysis
+    prep: perform (* optional, ! mandetoray)
+        * sinogram background normalization
+        * slit detection
+        * detector drift (translate+rotate) correction
+        * data reduction (corpping)
+        * stitching
+        ! -ln(img)
+        ! action logging to H5 archive
+    recon: perform tomography reconstruction using external engine specified
+           in configuration file
+        * tomopy
+        * tomoMPI
+        * MIDAS (upcoming)
+    analyze: perform specified analysis on reconstruction volume
+        * porosity characterization
+        * phase boundary detection
+        * crack network visualization (vtk)
 
 Usage:
     tomoprocer.py molt     <CONFIGFILE>
