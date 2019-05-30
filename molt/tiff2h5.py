@@ -71,6 +71,28 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
                 _dst[idx,:,:] = imread(os.path.join(fpath, _fn))
 
 
+@log_exception(logger_default)
+def pack_h5_to_hdf5(fconfig:  str) -> None:
+    """
+    Description
+    -----------
+        Combine smaller HDF5 archives from wedge scans to a single HDF5
+        archive based on given information
+
+    Parameters
+    ----------
+    fconfig: str
+        configuration file, must contain a 'molt' block to guide the 
+        conversion
+
+    Returns
+    -------
+    None
+    """
+    raise NotImplementedError('coming soon')
+
+
 if __name__ == "__main__":
+    # quick testing
     import sys
     pack_tiff_to_hdf5(sys.argv[1])
