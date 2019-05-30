@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Common file loader functions.
+Common file loading/writing functions.
 """
 
 import yaml
