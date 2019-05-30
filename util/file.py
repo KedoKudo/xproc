@@ -10,6 +10,7 @@ https://codereview.stackexchange.com/questions/120802/recursively-save-python-di
 
 import yaml
 import h5py
+import numpy                as     np
 from   tomoproc.util.logger import log_exception
 from   tomoproc.util.logger import logger_default
 
@@ -67,12 +68,12 @@ def recursive_save_dict_to_h5group(h5file: "h5py.File",
         ) -> None:
     """recursively write data to HDF5 archive"""
     for key, item in dic.items():
-        if isinstance(item, (np.ndarray, np.int64, np.float64, str, bytes,int,float,np.bool_)):
-            h5file[path + key] = item
-        elif isinstance(item, dict):
+        if isinstance(item, dict):
             recursive_save_dict_to_h5group(h5file, path + key + '/', item)
+        elif isinstance(item, list):
+            h5file[path + key] = np.array(item)
         else:
-            raise ValueError(f'Cannot save {item} type')
+            h5file[path + key] = item
 
 
 if __name__ == "__main__":
