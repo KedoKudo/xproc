@@ -41,7 +41,7 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
         support to add one image at a time.
     """
     cfg_all = load_yaml(fconfig)
-    cfg = cfg_all['molt']
+    cfg = cfg_all['morph']
     fpath = cfg['file_path']
     fnpre = cfg['file_prefix']
     ffmt  = cfg['file_format']

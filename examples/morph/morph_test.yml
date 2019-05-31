@@ -44,8 +44,8 @@ reconstruction:
 # NOTE:
 #   the file_path need to be an absolute path to the location of the testing
 #   files
-molt:
-  file_path:   '/Users/chenzhang/Documents/Workbench/tomoproc/examples/molting'
+morph:
+  file_path:   '/Users/chenzhang/Documents/Workbench/tomoproc/examples/morph'
   file_prefix: 'PUP_FF_SOFC_hires3_S2'
   file_format: 'tiff'
   numpadding:  5

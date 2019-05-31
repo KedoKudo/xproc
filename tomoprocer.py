@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """tomoprocer
-    molt: legacy data support
+    morph: legacy data support
         convert tiff|binary to HDF5 archive for subsequent analysis
     prep: perform (* optional, ! mandetoray)
         * sinogram background normalization
@@ -23,7 +23,7 @@
         * crack network visualization (vtk)
 
 Usage:
-    tomoprocer.py molt     <CONFIGFILE>
+    tomoprocer.py morph    <CONFIGFILE>
     tomoprocer.py prep     <CONFIGFILE>
     tomoprocer.py recon    <CONFIGFILE>
     tomoprocer.py analyze  <CONFIGFILE>
@@ -36,13 +36,13 @@ Options:
 """
 
 from docopt import docopt
-from tomoproc.molt.tiff2h5 import pack_tiff_to_hdf5
+from tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
 
 if __name__ == "__main__":
     argvs = docopt(__doc__, argv=None, help=True, version="tomoprocer v0.0.1")
     print(argvs)
 
-    if argvs['molt']:
+    if argvs['morph']:
         try:
             pack_tiff_to_hdf5(argvs['<CONFIGFILE>'])
         except:
