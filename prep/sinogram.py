@@ -12,6 +12,7 @@ from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
 
 
+@log_exception(logger_default)
 def denoise(
         sino: np.ndarray,
         method: str='smd',
@@ -65,6 +66,7 @@ def denoise(
         raise NotImplementedError
 
 
+@log_exception(logger_default)
 def normalize_background(
         sino: np.ndarray,
         detect_bg: bool=True,
