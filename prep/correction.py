@@ -90,7 +90,9 @@ def normalize_background(
         designated background pixels, superceeded by detect_bg
     interpolate: bool
         whether to interpolate background or not
-        NOTE:
+        ========
+        | NOTE |
+        ========
         linear interpolation is recommended as the beam are not alawys stable,
         which could lead to intensity shift that cannot be correct through
         background removal.
@@ -100,6 +102,11 @@ def normalize_background(
     np.ndarray
         sinogram with non-sample region (background) normalized to one
             one -> zero attenuation
+
+    NOTE
+    ----
+    Sometimes two or four iterations are necessary if the beam is extremely
+    unstable
     """
     sino = np.sqrt(sino)  # for better auto background detection
     
