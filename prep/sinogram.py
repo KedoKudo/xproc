@@ -7,6 +7,7 @@ Contain functions operating on tomography sinograsm
 
 import numpy                as     np
 from   scipy.signal         import medfilt2d
+from   scipy.ndimage        import gaussian_filter
 from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
 
@@ -65,15 +66,32 @@ def denoise(
 
 
 def normalize_background(
-        sino: np.ndarray, 
-        method: str='interpolate',
+        sino: np.ndarray,
+        detect_bg: bool=True,
+        bg_pixel:  int=11,
+        interpolate: bool=True,
     ) -> np.ndarray:
     """
     Description
     -----------
+    Auto-detect background (non-sample) region and normalize the background of
+    the attentuation map (sinogram).
+    This method will not work if the sample occupy the entire filed of view.
 
     Parameters
     ----------
+    sino: np.ndarray
+        sinogram as attenuation map (befor the minus-log step)
+    detect_bg: bool
+        whether to use automated background pixel detection
+    bg_pixel: int
+        designated background pixels, superceeded by detect_bg
+    interpolate: bool
+        whether to interpolate background or not
+        NOTE:
+        linear interpolation is recommended as the beam are not alawys stable,
+        which could lead to intensity shift that cannot be correct through
+        background removal.
 
     Returns
     -------
@@ -81,9 +99,44 @@ def normalize_background(
         sinogram with non-sample region (background) normalized to one
             one -> zero attenuation
     """
-    pass
+    sino = np.sqrt(sino)  # for better auto background detection
+    
+    if detect_bg:
+        # use median filter and gaussian filter to locate the sample region 
+        # -- median filter is to counter impulse noise
+        # -- gaussian filter is for estimating the sample location
+        tmp = gaussian_filter(medfilt2d(sino, kernel_size=3), sigma=50)
+
+        # use gradient of the summed (over omega) linear proflie to locate
+        # background pixels
+        prf = np.gradient(np.sum(tmp, axis=0))
+
+        # find the left and right bound of the sample 
+        edgeLeft  = max(prof.argmin(), 11) #
+        edgeRigth = min(prof.argmax(), sino.shape[1]-11)
+    else:
+        edgeLeft  = bg_pixel
+        edgeRigth = sino.shape[1]-bg_pixel
+
+    # locate the left and right background
+    # NOTE:
+    #   Due to hardware issue, the first and last pixels are not always
+    #   reliable, therefore throw them out...
+    bgL = np.average(sino[:, 1:edgeLeft],   axis=1)
+    bgR = np.average(sino[:, edgeRigth:-1], axis=1)
+
+    # calculate the correction matrix alpha
+    alpha = np.ones_like(sino)
+    if interpolate:
+        for n in range(alpha.shape[0]):
+            alpha[n,:] = np.linspace(bgL[n], bgR[n], alpha.shape[1])
+    else:
+        alpha *= ((bgL+bgR)/2)[:,None]
+    
+    # apply the correction
+    return (sino/alpha)**2
 
 
 if __name__ == "__main__":
     testimg = np.random.random((500,500))
-    img = denoise(testimg, method='svd')
+    sino = denoise(testimg, method='svd')
