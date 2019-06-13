@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 """
 Contain functions operating on tomography sinograsm
 
@@ -10,9 +11,13 @@ NOTE:
 """
 
 import numpy                   as     np
+
+from   typing                  import Optional
+from   typing                  import Tuple
 from   scipy.signal            import medfilt2d
 from   scipy.ndimage           import gaussian_filter
 from   tomoproc.prep.detection import detect_sample_in_sinogram
+from   tomoproc.prep.detection import detect_corrupted_proj
 from   tomoproc.util.logger    import logger_default
 from   tomoproc.util.logger    import log_exception
 
@@ -146,6 +151,36 @@ def beam_intensity_fluctuation_correction(
     return (sino/alpha)**2
 
 
+@log_exception(logger_default)
+def remove_corrupted_projs(
+    projs: np.ndarray,
+    omegas: np.ndarray,
+    idx_good: Optional[np.ndarray]=None,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Description
+    -----------
+    Remove corrupted prjections/frames in a given tomo image stack
+
+    Parameters
+    ----------
+    projs: np.ndarray
+        Tomo image stack [axis_omega, axis_imgrow, axis_imgcol]
+    idx_good: np.ndarray|None
+        index (along omega axis) for good frames 
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Pruned tomo image stack and corresponding angular position (omegas)
+    """
+    # get the index of good frames if not provided
+    idx_good = detect_corrupted_proj(projs, omegas)[1] if idx_good is None else idx_good
+
+    return projs[idx_good,:,:], omegas[idx_good]
+
+
+@log_exception(logger_default)
 def correct_horizontal_jittering(
     tomostack: np.ndarray,
     omegas: np.ndarray,
