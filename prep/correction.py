@@ -3,13 +3,18 @@
 
 """
 Contain functions operating on tomography sinograsm
+
+NOTE:
+    Different experiment requires different type of correction, the choice of
+    which should be established via trial and error.
 """
 
-import numpy                as     np
-from   scipy.signal         import medfilt2d
-from   scipy.ndimage        import gaussian_filter
-from   tomoproc.util.logger import logger_default
-from   tomoproc.util.logger import log_exception
+import numpy                   as     np
+from   scipy.signal            import medfilt2d
+from   scipy.ndimage           import gaussian_filter
+from   tomoproc.prep.detection import detect_sample_in_sinogram
+from   tomoproc.util.logger    import logger_default
+from   tomoproc.util.logger    import log_exception
 
 
 @log_exception(logger_default)
@@ -67,15 +72,17 @@ def denoise(
 
 
 @log_exception(logger_default)
-def normalize_background(
+def beam_intensity_fluctuation_correction(
         sino: np.ndarray,
         detect_bg: bool=True,
-        bg_pixel:  int=11,
+        bg_pixel:  int=5,
         interpolate: bool=True,
     ) -> np.ndarray:
     """
     Description
     -----------
+    The beam intensity always varies during an experiment, leading to varying
+    background (non-sample) region.
     Auto-detect background (non-sample) region and normalize the background of
     the attentuation map (sinogram).
     This method will not work if the sample occupy the entire filed of view.
@@ -110,40 +117,48 @@ def normalize_background(
     """
     sino = np.sqrt(sino)  # for better auto background detection
     
+    # get sample location
     if detect_bg:
-        # use median filter and gaussian filter to locate the sample region 
-        # -- median filter is to counter impulse noise
-        # -- gaussian filter is for estimating the sample location
-        tmp = gaussian_filter(medfilt2d(sino, kernel_size=3), sigma=50)
-
-        # use gradient of the summed (over omega) linear proflie to locate
-        # background pixels
-        prf = np.gradient(np.sum(tmp, axis=0))
-
-        # find the left and right bound of the sample 
-        edgeLeft  = max(prof.argmin(), 11) #
-        edgeRigth = min(prof.argmax(), sino.shape[1]-11)
+        ledge, redge = detect_sample_in_sinogram(sino)
     else:
-        edgeLeft  = bg_pixel
-        edgeRigth = sino.shape[1]-bg_pixel
+        ledge, redge = bg_pixel, sino.shape[1]-bg_pixel
 
     # locate the left and right background
     # NOTE:
     #   Due to hardware issue, the first and last pixels are not always
     #   reliable, therefore throw them out...
-    bgL = np.average(sino[:, 1:edgeLeft],   axis=1)
-    bgR = np.average(sino[:, edgeRigth:-1], axis=1)
+    lbg = np.average(sino[:, 1:ledge],   axis=1)
+    rbg = np.average(sino[:, redge:-1],  axis=1)
 
     # calculate the correction matrix alpha
     alpha = np.ones_like(sino)
     if interpolate:
         for n in range(alpha.shape[0]):
-            alpha[n,:] = np.linspace(bgL[n], bgR[n], alpha.shape[1])
+            alpha[n,:] = np.linspace(lbg[n], rbg[n], alpha.shape[1])
     else:
-        alpha *= ((bgL+bgR)/2)[:,None]
+        alpha *= ((lbg+rbg)/2)[:,None]
     
     # apply the correction
     return (sino/alpha)**2
+
+
+def correct_horizontal_jittering(
+    tomostack: np.ndarray,
+    omegas: np.ndarray,
+    remove_bad_frames: bool=True,
+    )->np.ndarray:
+    """
+    Description
+    -----------
+
+    Parameters
+    ----------
+
+    Returns 
+    -------
+    
+    """
+    pass
 
 
 if __name__ == "__main__":
