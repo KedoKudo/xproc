@@ -200,6 +200,10 @@ def correct_horizontal_jittering(
     pass
 
 
+def correct_detector_drifting():
+    pass
+
+
 if __name__ == "__main__":
     testimg = np.random.random((500,500))
     sino = denoise(testimg, method='svd')

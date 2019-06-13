@@ -115,6 +115,10 @@ def detect_corrupted_proj(
     return np.where(diff>threshold)[0], np.where(diff<=threshold)[0]
 
 
+def detect_slit_corner():
+    pass
+
+
 if __name__ == "__main__":
     projs = np.random.random((360,60,60))
     thetas = np.linspace(0, np.pi*2, 360)
