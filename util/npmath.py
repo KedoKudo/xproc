@@ -7,6 +7,8 @@ Usefule numpy based calculations
 
 import numpy        as     np
 import scipy        as     sp
+
+from   typing       import Tuple
 from   numpy.linalg import norm
 
 
@@ -224,33 +226,33 @@ def calc_affine_transform(pts_source: np.ndarray,
     return scipy.linalg.lstsq(pad(pts_source), pad(pts_target))[0].T
 
 
-@log_exception(logger_default)
-def selective_medfilt2d(
-        image: np.ndarray, 
-        kernel_size: int=3,
-        threshold: float=0.5,
+def rescale_image(
+    img: np.ndarray,
+    dynamic_range: Tuple[float, float] = (0, 1),
     ) -> np.ndarray:
     """
     Description
     -----------
-        Selective 2D median filter using scipy.signal.medfilt2d as backend
+    Rescale the intensity of the given image between minval and maxval
 
     Parameters
     ----------
-    image: np.ndarray
-        2D image
-    kernel_size: int
-        2D median filter size, larger kernel size often requires more time
-    threshold: float
-        threshold of relative change to decide whether to keep raw data or use
-        median filtered pixel
+    img: np.ndarray
+        input 2D image
+    dynamic_range: (float, float)
+        target dynamic range
 
     Returns
     -------
     np.ndarray:
-        Resulting 2D image
+        Rescaled 2D image
     """
-    pass
+    # rescale to 0-1
+    img -= img.min()
+    img /= img.max()
+
+    # rescale to dynamic range
+    return dynamic_range[0] + img*(dynamic_range[1] - dynamic_range[0])
 
 
 if __name__ == "__main__":
