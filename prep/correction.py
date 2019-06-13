@@ -31,7 +31,8 @@ def denoise(
     -----------
         Use selected method 
             [median, selective median, SVD] 
-        to reduce the impulse noise in the sinogram
+        to reduce the impulse noise in the sinogram.  All methods used here are
+        lossy, especially the SVD method.
     
     Parameters
     ----------
@@ -82,10 +83,13 @@ def beam_intensity_fluctuation_correction(
     Description
     -----------
     The beam intensity always varies during an experiment, leading to varying
-    background (non-sample) region.
-    Auto-detect background (non-sample) region and normalize the background of
-    the attentuation map (sinogram).
-    This method will not work if the sample occupy the entire filed of view.
+    background (non-sample) region.  This artifacts will leads to strong linear
+    artifacts in the final reconstruction, therefore need to be corrected by
+    forcing all non-sample region (background) to be one (zero attenuation).
+    By default, the sample bound (left and right edge) will be automatically 
+    detected with 
+        tomoproc.prep.detection.detect_sample_in_sinogram
+    which can be bypassed (for speed) if the sample limit is known.
 
     Parameters
     ----------
@@ -112,8 +116,8 @@ def beam_intensity_fluctuation_correction(
 
     NOTE
     ----
-    Sometimes two or four iterations are necessary if the beam is extremely
-    unstable
+    * This method will not work if the sample occupy the entire filed of view.
+    * Sometimes two or four iterations are necessary for unstable beam.
     """
     sino = np.sqrt(sino)  # for better auto background detection
     
