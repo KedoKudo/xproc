@@ -29,3 +29,8 @@ Options:
 * __tifffile__:  pip install tifffile
 * __docopt__: pip install docopt
 * __vtk__: pip install vtk
+
+
+## Docker
+
+Container building recipe for using tomoproc.
