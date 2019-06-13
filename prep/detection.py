@@ -19,6 +19,7 @@ from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
 
 
+@log_exception(logger_default)s
 def detect_sample_in_sinogram(
     sino: np.ndarray,
     kernel_size: int=3,
@@ -65,10 +66,11 @@ def detect_sample_in_sinogram(
         )
 
 
+@log_exception(logger_default)
 def detect_corrupted_proj(
     projs: np.ndarray,
     omegas: np.ndarray,
-    threshold: float=0.05,
+    threshold: float=0.2,
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description
