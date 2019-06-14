@@ -25,7 +25,8 @@ RUN conda update conda -y -q && \
     conda clean --all -f -y
 # config pip
 RUN pip install --upgrade pip && \
-    pip install tifffile docopt vtk
+    pip install tifffile docopt vtk && \
+    pip install git+https://github.com/KedoKudo/tomoproc#egg=tomoproc
 # config jupyter
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt-get install -y nodejs
@@ -33,6 +34,3 @@ RUN jupyter nbextension enable --py widgetsnbextension --sys-prefix
 RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager
 RUN jupyter lab build
 RUN npm cache clean --force
-# config tomoproc
-COPY ../tomoproc  /opt/tomoproc
-ENV  PYTHONPATH /opt
