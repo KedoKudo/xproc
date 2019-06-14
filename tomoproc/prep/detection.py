@@ -19,7 +19,7 @@ from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
 
 
-@log_exception(logger_default)s
+@log_exception(logger_default)
 def detect_sample_in_sinogram(
     sino: np.ndarray,
     kernel_size: int=3,
