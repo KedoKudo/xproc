@@ -2,6 +2,7 @@
 
 import glob
 import setuptools
+import tomoproc
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -9,7 +10,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
      name='tomoproc',  
      version='0.0.1',
-     scripts=glob.glob('tomoproc/*'),
+     scripts=['tomoprocer.py'],
      author="KedoKudo",
      author_email="chenzhang8722@gmail.com",
      description="Automated tomography reconstruction meta-package",
