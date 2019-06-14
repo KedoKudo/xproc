@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import glob
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -8,7 +9,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
      name='tomoproc',  
      version='0.0.1',
-     scripts=['tomoproc'] ,
+     scripts=[glob.glob('tomoproc/*')] ,
      author="KedoKudo",
      author_email="chenzhang8722@gmail.com",
      description="Automated tomography reconstruction meta-package",
