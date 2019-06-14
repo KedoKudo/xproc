@@ -13,6 +13,7 @@ RUN conda update conda -y -q && \
     conda update -y -q --all && \
     conda install --yes \
         jupyter \
+        jupyterlab \
         numpy \
         scipy \
         pandas \
@@ -26,6 +27,12 @@ RUN conda update conda -y -q && \
 RUN pip install --upgrade pip && \
     pip install tifffile docopt vtk
 # config jupyter
-RUN jupyter nbextension enable --py widgetsnbextension --sys-prefix && \
-    jupyter labextension install @jupyter-widgets/jupyterlab-manager
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+RUN apt-get install -y nodejs
+RUN jupyter nbextension enable --py widgetsnbextension --sys-prefix
+RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager
+RUN jupyter lab build
 RUN npm cache clean --force
+# config tomoproc
+COPY ../tomoproc  /opt/tomoproc
+ENV  PYTHONPATH /opt
