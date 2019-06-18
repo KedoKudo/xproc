@@ -193,4 +193,15 @@ def fit_peak_1d(
 
 
 if __name__ == "__main__":
-    pass
+    # example usage
+    amp, pos, fwhm, shape = np.random.random(4)*np.pi
+    N = 101
+    xdata = np.linspace(-np.pi, np.pi, N)
+    ydata = voigt1d(xdata, amp, pos, fwhm, shape) + (np.random.random(N)-0.5)*amp/10
+    print(f"intput:\nA={amp}, mu={pos}, gamma={fwhm/2}, shape={shape}")
+
+    paras = fit_peak_1d(xdata, ydata, engine='lmfit')
+    print(f"fit with lmfit:\n{paras}")
+
+    paras = fit_peak_1d(xdata, ydata, engine='tomoproc')
+    print(f"fit with tomoproc:\n{paras}")
