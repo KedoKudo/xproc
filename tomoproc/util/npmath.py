@@ -5,12 +5,11 @@
 Usefule numpy based calculations
 """
 
-import numpy        as     np
-import scipy        as     sp
+import numpy         as     np
+import scipy         as     sp
 
-from   typing       import Tuple
-from   numpy.linalg import norm
-
+from   typing        import Tuple
+from   numpy.linalg  import norm
 
 def normalize(vec: np.ndarray, axis=None) -> np.ndarray:
     """
@@ -122,63 +121,6 @@ def ang_between(vec1: np.ndarray, vec2: np.ndarray) -> float:
     1.5707963267948966
     """
     return np.arccos(safe_dotprod(vec1, vec2))
-
-
-def gauss1d(x: np.ndarray, amp: float, mu: float, sigma: float) -> np.ndarray:
-    """
-    1D Gaussian function used for curve fitting.
-
-    Parameters
-    ----------
-    x  :  np.ndarray
-        1D array for curve fitting
-    amp: float
-        amplitude
-    mu: float
-        peak center
-    sigma: float
-        variance
-
-    Returns
-    -------
-    np.ndarray
-        1d Gaussian distribution evaluted at x with p
-
-    NOTE
-    ----
-    The half-width at half-maximum (HWHM) for a gaussian distribution is
-        alpha = sigma * np.sqrt(2*np.log(2))
-    """
-    return amp/sigma/np.sqrt(2*np.pi)*np.exp(-(x-mu)**2/2/(sigma**2))
-
-
-def lorentz1d(x: np.ndarray, amp: float, mu: float, gamma:float):
-    """
-    Description
-    -----------
-    1D Lorentz distrubtion function
-
-    Parameters
-    ----------
-    x: np.ndarray
-        input data
-    amp: float
-        height of peak
-    mu: float
-        center of peak
-    gamma: float
-        half-width at half-maximum (HWHM) of peak
-
-    Returns
-    -------
-    np.ndarray
-        1D Lorentz distrubtion with respect to the input array
-    """
-    return amp*(gamma**2)/((x-mu)**2 + gamma**2)
-
-
-def voigt1d():
-    pass
 
 
 def discrete_cdf(data: np.ndarray, steps=None) -> tuple:
