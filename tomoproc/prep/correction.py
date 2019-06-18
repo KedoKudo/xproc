@@ -16,6 +16,7 @@ from   typing                  import Optional
 from   typing                  import Tuple
 from   scipy.signal            import medfilt2d
 from   scipy.ndimage           import gaussian_filter
+from   scipy.ndimage           import shift
 from   tomoproc.prep.detection import detect_sample_in_sinogram
 from   tomoproc.prep.detection import detect_corrupted_proj
 from   tomoproc.util.logger    import logger_default
@@ -182,22 +183,67 @@ def remove_corrupted_projs(
 
 @log_exception(logger_default)
 def correct_horizontal_jittering(
-    tomostack: np.ndarray,
+    projs: np.ndarray,
     omegas: np.ndarray,
     remove_bad_frames: bool=True,
-    )->np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description
     -----------
+    Correct the horizontal jittering of sample by shifting all projections
+    such that the rotation center is alawys at the center of each projection.
 
     Parameters
     ----------
+    projs: np.ndarray
+        tomogaphy image stacks [axis_omega, axis_imgrow, axis_imgcol]
+    omegas: np.ndarray
+        rotary position array
+    remove_bad_frames: bool
+        remove corrupted frames from the projs
 
-    Returns 
+    Returns
     -------
-    
+    tuple(np.ndarray, np.ndarray)
+        corrected (and pruned) projs ready for tomography reconstruction and
+        corresponding omegas
     """
-    pass
+    # assume equal step, find the index range equals to 180 degree
+    dn = int(np.pi/(omegas[1] - omegas[0]))
+
+    # identify bad frames if necesary
+    if remove_bad_frames:
+        idx_bad, idx_good = detect_corrupted_proj(projs, omegas)
+
+    # get the cnts from each 180 pairs
+    cnts = [
+        tomopy.find_center_pc(
+            rescale_image(minus_log(projs[n_img,:,:])), 
+            rescale_image(minus_log(projs[n_img+dn,:,:])), 
+            rotc_guess=projs.shape[2]/2,
+            )   for nimg in range(dn)
+    ]
+    # 180 -> 360
+    cnts = cnts + cnts
+    shift_vals = [
+        np.array([0, projs.shape[2]/2 - val])
+        for val in cnts
+    ]
+
+    # shift each proj so that the rotation center is the central col
+    for n in range(len(shift_vals)):
+        projs[n,:,:] = shift(
+            projs[n,:,:],
+            shift_vals[n],
+            mode='constant', cval=0, order=1,
+            )
+
+    # remove the corrupted frames if requested
+    if remove_bad_frames:
+        projs = projs[idx_good,:,:]
+        omegas = omegas[idx_good]
+    
+    return projs, omegas
 
 
 def correct_detector_drifting():
