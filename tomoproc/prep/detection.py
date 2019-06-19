@@ -12,6 +12,8 @@ from   typing               import Tuple
 from   scipy.signal         import medfilt
 from   scipy.signal         import medfilt2d
 from   scipy.ndimage        import gaussian_filter
+from   scipy.ndimage        import gaussian_filter1d
+from   skimage              import exposure
 from   tomopy               import minus_log
 from   tomopy               import find_center_pc
 from   tomoproc.util.npmath import rescale_image
@@ -115,7 +117,61 @@ def detect_corrupted_proj(
     return np.where(diff>threshold)[0], np.where(diff<=threshold)[0]
 
 
+def guess_slit_box(img: np.ndarray) -> dict:
+    """
+    Description
+    -----------
+    Auto detect/guess the four blades position (in pixels) for given image
+
+    Parameters
+    ----------
+    img: np.ndarray
+        2D tomography image with slit box
+
+    Returns
+    -------
+    dict:
+        dictionary contains the approximated position (in pixel) for the four
+        slit blades
+    
+    NOTE
+    ----
+    For images without any slit blades, a random (probably useless) region
+    will be returned.
+
+    Relative fast:
+    tested on MacBookPro13,3
+    395 ms ± 14 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    """    
+    # Contrast stretching
+    pl, ph = np.percentile(img, (2, 98))
+    img = exposure.rescale_intensity(img, in_range=(pl, ph))
+    
+    # equilize hist
+    img = exposure.equalize_adapthist(img)
+    
+    # map to log to reveal transition box
+    img = np.log(medfilt2d(img.astype(float))+1)
+    
+    # get row and col profile gradient
+    pdot_col = np.gradient(gaussian_filter1d(np.average(img, axis=0), sigma=11))
+    pdot_row = np.gradient(gaussian_filter1d(np.average(img, axis=1), sigma=11))
+
+    return {
+        'left':  np.argmax(pdot_col),
+        'right': np.argmin(pdot_col),
+        'top':   np.argmax(pdot_row),
+        'bot':   np.argmin(pdot_row),
+    }
+
+
 def detect_slit_corner():
+    """
+    Description
+    -----------
+    Four blade slits are often used to reshape the incident beam for tomography
+    characterization.  The 
+    """
     pass
 
 
