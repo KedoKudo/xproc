@@ -192,6 +192,72 @@ def fit_peak_1d(
             }
 
 
+def sigmoid(
+    x: np.ndarray, 
+    xc: float=0, 
+    a: float=1,
+    ) -> np.ndarray:
+    """
+    Description
+    -----------
+    1D sigmoid (logistic) function
+
+    Parameters
+    ----------
+    x: np.ndarray
+        independent var array
+    xc: float
+        distribution center
+    a: float
+        distribution shape
+    
+    Returns
+    -------
+    np.ndarray
+        1D sigmoid distribution with given parameters
+    """
+    return 1.0/(1.0 + np.exp(-a*(x - xc)))
+
+
+def fit_sigmoid(
+    xdata: np.ndarray, 
+    ydata: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Description
+    -----------
+    Fit 1D sigmoid distribution
+
+    Parameters
+    ----------
+    xdata: np.ndarray
+        independent var array
+    ydata: np.ndarray
+        dependent var array
+    
+    Returns
+    -------
+    Tuple[opt, cov]
+        Return fitting results from curve_fit
+
+    NOTE
+    ----
+    This is mostly used for fine slit corner detection
+    """
+    # normalize ydata to standard range (0,1)
+    ydata -= ydata.min()
+    ydata /= ydata.max()
+    r = xdata.mean()
+    
+    return curve_fit(
+        sigmoid, xdata, ydata,
+        p0=[r, 1],
+        bounds=([r-r*0.2, -np.inf],
+                [r+r*0.2,  np.inf],
+               ),
+    )
+
+
 if __name__ == "__main__":
     # example usage
     amp, pos, fwhm, shape = np.random.random(4)*np.pi
