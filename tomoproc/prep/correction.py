@@ -19,11 +19,8 @@ from   scipy.ndimage           import gaussian_filter
 from   scipy.ndimage           import shift
 from   tomoproc.prep.detection import detect_sample_in_sinogram
 from   tomoproc.prep.detection import detect_corrupted_proj
-from   tomoproc.util.logger    import logger_default
-from   tomoproc.util.logger    import log_exception
 
 
-@log_exception(logger_default)
 def denoise(
         sino: np.ndarray,
         method: str='smd',
@@ -78,7 +75,6 @@ def denoise(
         raise NotImplementedError
 
 
-@log_exception(logger_default)
 def beam_intensity_fluctuation_correction(
         sino: np.ndarray,
         detect_bg: bool=True,
@@ -152,7 +148,6 @@ def beam_intensity_fluctuation_correction(
     return (sino/alpha)**2
 
 
-@log_exception(logger_default)
 def remove_corrupted_projs(
     projs: np.ndarray,
     omegas: np.ndarray,
@@ -181,7 +176,6 @@ def remove_corrupted_projs(
     return projs[idx_good,:,:], omegas[idx_good]
 
 
-@log_exception(logger_default)
 def correct_horizontal_jittering(
     projs: np.ndarray,
     omegas: np.ndarray,
