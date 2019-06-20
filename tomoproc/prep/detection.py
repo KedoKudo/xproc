@@ -6,19 +6,20 @@
 Provide functions that operate on projections
 """
 
-import numpy                as     np
+import numpy                     as     np
 
-from   typing               import Tuple
-from   scipy.signal         import medfilt
-from   scipy.signal         import medfilt2d
-from   scipy.ndimage        import gaussian_filter
-from   scipy.ndimage        import gaussian_filter1d
-from   skimage              import exposure
-from   tomopy               import minus_log
-from   tomopy               import find_center_pc
-from   tomoproc.util.npmath import rescale_image
-from   tomoproc.util.logger import logger_default
-from   tomoproc.util.logger import log_exception
+from   typing                    import Tuple
+from   scipy.signal              import medfilt
+from   scipy.signal              import medfilt2d
+from   scipy.ndimage             import gaussian_filter
+from   scipy.ndimage             import gaussian_filter1d
+from   skimage                   import exposure
+from   tomopy                    import minus_log
+from   tomopy                    import find_center_pc
+from   tomoproc.util.npmath      import rescale_image
+from   tomoproc.util.peakfitting import fit_sigmoid
+from   tomoproc.util.logger      import logger_default
+from   tomoproc.util.logger      import log_exception
 
 
 @log_exception(logger_default)
@@ -165,14 +166,61 @@ def guess_slit_box(img: np.ndarray) -> dict:
     }
 
 
-def detect_slit_corner():
+def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
     """
     Description
     -----------
-    Four blade slits are often used to reshape the incident beam for tomography
-    characterization.  The 
+    Detect four corners (sub-pixel) formed by the four balde slits commonly 
+    used at 1ID@APS.
+
+    Parameters
+    ----------
+    img: np.ndarray
+        input images, slit baldes must be visible within the image
+    r: float
+        domain size, will be automatically adjusted to avoid out-of-bound
+        issue
+    
+    Returns
+    -------
+    list[upper_left, lower_left, lower_right, upper_right]
+        List of the sub-pixel positions of the four corners in the
+        counter-clock-wise order
+
+    NOTE
+    ----
+    The location of the corner is affected by the size of the domain (r). A
+    consistent value is recommended for quantitative analysis, such as detector
+    drift correction.
     """
-    pass
+    # guess the rough location first
+    edges = guess_slit_box(img)
+    le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
+    
+    r_row, r_col = min(r, be-te-1), min(r, re-le-1)
+    
+    safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
+                                    (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
+                                   ]
+    
+    cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
+    
+    for i, cnr in enumerate(cnrs):
+        
+        rowrange, colrange = safe_domain(*cnr)
+        domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
+        
+        horizontal_lp = np.average(domain, axis=0)
+        vertical_lp   = np.average(domain, axis=1)
+        
+        popt, pcov = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
+        _row = popt[0]
+        popt, pcov = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
+        _col = popt[0]
+        
+        cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
+    
+    return cnrs
 
 
 if __name__ == "__main__":
