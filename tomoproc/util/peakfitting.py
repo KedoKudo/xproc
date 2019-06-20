@@ -8,6 +8,7 @@ Usefule functions for peak fitting
 import numpy          as     np
 import scipy          as     sp
 
+from   typing         import Tuple
 from   scipy.special  import wofz
 from   scipy.optimize import curve_fit
 from   lmfit.models   import VoigtModel
