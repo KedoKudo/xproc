@@ -18,11 +18,8 @@ from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
 from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.peakfitting import fit_sigmoid
-from   tomoproc.util.logger      import logger_default
-from   tomoproc.util.logger      import log_exception
 
 
-@log_exception(logger_default)
 def detect_sample_in_sinogram(
     sino: np.ndarray,
     kernel_size: int=3,
@@ -69,7 +66,6 @@ def detect_sample_in_sinogram(
         )
 
 
-@log_exception(logger_default)
 def detect_corrupted_proj(
     projs: np.ndarray,
     omegas: np.ndarray,
