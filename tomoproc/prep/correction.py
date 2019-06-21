@@ -11,14 +11,18 @@ NOTE:
 """
 
 import numpy                   as     np
+import concurrent.futures      as     cf
 
 from   typing                  import Optional
 from   typing                  import Tuple
 from   scipy.signal            import medfilt2d
 from   scipy.ndimage           import gaussian_filter
 from   scipy.ndimage           import shift
+from   scipy.ndimage           import affine_transform
 from   tomoproc.prep.detection import detect_sample_in_sinogram
 from   tomoproc.prep.detection import detect_corrupted_proj
+from   tomoproc.prep.detection import detect_slit_corners
+from   tomoproc.util.npmath    import calc_affine_transform
 
 
 def denoise(
@@ -240,9 +244,71 @@ def correct_horizontal_jittering(
     return projs, omegas
 
 
-def correct_detector_drifting():
-    pass
+def correct_detector_drifting(
+    projs: np.ndarray,
+    ) -> Tuple[np.ndarray, list]:
+    """
+    Description
+    -----------
+    Systematic shifting and rotation could happen to a tomo imagestack
+    due to detetor stage settling.
 
+    Parameters
+    ----------
+    projs: np.ndarray
+        Tomo imagestack with [axis_omega, axis_row, axis_col]
+
+    Returns
+    -------
+    (np.ndarray, list)
+        Tomo imagestack with detector drifting corrected and the list of the
+        affine transformation matrix used for correction.
+
+    NOTE
+    ----
+    Use ALL available resource possible by default (aggresive approach)
+    """
+    # -- detect the four corners
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                detect_slit_corners, 
+                projs[n_omega,:,:],
+                )
+            for n_omega in range(projs.shape[0])
+        ]
+    
+    cnrs_all = [me.result() for me in _jobs]
+
+    # -- calculate the transformation matrix using the first frames as the
+    # -- reference frame
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                calc_affine_transform, 
+                np.array(me),            # source
+                np.array(cnrs_all[0]),   # reference/target
+                )
+            for me in cnrs_all
+        ]
+    
+    correction_matrix = [me.result() for me in _jobs]
+
+    # -- apply the affine transformation to each frame
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                affine_transform,
+                projs[n_omega,:,:],
+                correction_matrix[n_omega][0:2,0:2],      # rotation
+                offset=correction_matrix[n_omega][0:2,2]  # translation
+            )
+            for n_omega in range(projs.shape[0])
+        ]
+    projs = np.stack([me.result() for me in _jobs], axis=0)
+
+    return projs, affine_transform
+    
 
 if __name__ == "__main__":
     testimg = np.random.random((500,500))
