@@ -203,7 +203,7 @@ def calc_affine_transform(pts_source: np.ndarray,
     #   therefore we need to transpose the matrix here
     #   to get the correct rotation
 
-    return scipy.linalg.lstsq(pad(pts_source), pad(pts_target))[0].T
+    return sp.linalg.lstsq(pad(pts_source), pad(pts_target))[0].T
 
 
 def rescale_image(
