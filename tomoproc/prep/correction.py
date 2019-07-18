@@ -83,7 +83,8 @@ def denoise(
 def beam_intensity_fluctuation_correction(
         sino: np.ndarray,
         detect_bg: bool=True,
-        bg_pixel:  int=5,
+        left_bg:  int=5,        # in pixels
+        right_bg: int=5,        # in pixels
         interpolate: bool=True,
     ) -> np.ndarray:
     """
@@ -104,7 +105,7 @@ def beam_intensity_fluctuation_correction(
         sinogram as attenuation map (befor the minus-log step)
     detect_bg: bool
         whether to use automated background pixel detection
-    bg_pixel: int
+    left_bg, right_bg: int
         designated background pixels, superceeded by detect_bg
     interpolate: bool
         whether to interpolate background or not
@@ -132,7 +133,7 @@ def beam_intensity_fluctuation_correction(
     if detect_bg:
         ledge, redge = detect_sample_in_sinogram(sino)
     else:
-        ledge, redge = bg_pixel, sino.shape[1]-bg_pixel
+        ledge, redge = left_bg, sino.shape[1]-right_bg
 
     # locate the left and right background
     # NOTE:
@@ -142,7 +143,7 @@ def beam_intensity_fluctuation_correction(
     rbg = np.average(sino[:, redge:-1],  axis=1)
 
     # calculate the correction matrix alpha
-    alpha = np.ones_like(sino)
+    alpha = np.ones(sino.shape)
     if interpolate:
         for n in range(sino.shape[0]):
             alpha[n,:] = np.linspace(lbg[n], rbg[n], sino.shape[1])
