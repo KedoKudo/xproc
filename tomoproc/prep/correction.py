@@ -9,7 +9,7 @@ NOTE:
     Different experiment requires different type of correction, the choice of
     which should be established via trial and error.
 """
-
+import tomopy
 import numpy                   as     np
 import concurrent.futures      as     cf
 
@@ -23,6 +23,7 @@ from   tomoproc.prep.detection import detect_sample_in_sinogram
 from   tomoproc.prep.detection import detect_corrupted_proj
 from   tomoproc.prep.detection import detect_slit_corners
 from   tomoproc.util.npmath    import calc_affine_transform
+from   tomoproc.util.npmath    import rescale_image
 
 
 def denoise(
@@ -143,8 +144,8 @@ def beam_intensity_fluctuation_correction(
     # calculate the correction matrix alpha
     alpha = np.ones_like(sino)
     if interpolate:
-        for n in range(alpha.shape[0]):
-            alpha[n,:] = np.linspace(lbg[n], rbg[n], alpha.shape[1])
+        for n in range(sino.shape[0]):
+            alpha[n,:] = np.linspace(lbg[n], rbg[n], sino.shape[1])
     else:
         alpha *= ((lbg+rbg)/2)[:,None]
     
@@ -211,13 +212,13 @@ def correct_horizontal_jittering(
 
     # identify bad frames if necesary
     if remove_bad_frames:
-        idx_bad, idx_good = detect_corrupted_proj(projs, omegas)
+        _, idx_good = detect_corrupted_proj(projs, omegas)
 
     # get the cnts from each 180 pairs
     cnts = [
         tomopy.find_center_pc(
-            rescale_image(minus_log(projs[n_img,:,:])), 
-            rescale_image(minus_log(projs[n_img+dn,:,:])), 
+            rescale_image(minus_log(projs[nimg,:,:])), 
+            rescale_image(minus_log(projs[nimg+dn,:,:])), 
             rotc_guess=projs.shape[2]/2,
             )   for nimg in range(dn)
     ]
