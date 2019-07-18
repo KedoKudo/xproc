@@ -19,7 +19,7 @@ RUN conda update conda -y -q && \
         pandas \
         scikit-learn \
         matplotlib \
-        seaborn              && \
+        seaborn && \
     conda install -y -c conda-forge \
         lmfit \
         tomopy   && \
