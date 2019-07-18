@@ -6,6 +6,7 @@
 Provide functions that operate on projections
 """
 
+import tomopy
 import numpy                     as     np
 
 from   typing                    import Tuple
@@ -99,8 +100,8 @@ def detect_corrupted_proj(
     # get the cnts from each 180 pairs
     cnts = [
         tomopy.find_center_pc(
-            rescale_image(minus_log(projs[n_img,:,:])), 
-            rescale_image(minus_log(projs[n_img+dn,:,:])), 
+            rescale_image(minus_log(projs[nimg,:,:])), 
+            rescale_image(minus_log(projs[nimg+dn,:,:])), 
             rotc_guess=projs.shape[2]/2,
             )   for nimg in range(dn)
     ]
@@ -209,9 +210,9 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
         horizontal_lp = np.average(domain, axis=0)
         vertical_lp   = np.average(domain, axis=1)
         
-        popt, pcov = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
+        popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
         _row = popt[0]
-        popt, pcov = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
+        popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
         _col = popt[0]
         
         cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
@@ -222,4 +223,4 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
 if __name__ == "__main__":
     projs = np.random.random((360,60,60))
     thetas = np.linspace(0, np.pi*2, 360)
-    detect_bad_proj(projs, thetas)
+    detect_corrupted_proj(projs, thetas)
