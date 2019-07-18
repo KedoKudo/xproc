@@ -24,7 +24,7 @@ from   tomoproc.prep.detection import detect_corrupted_proj
 from   tomoproc.prep.detection import detect_slit_corners
 from   tomoproc.util.npmath    import calc_affine_transform
 from   tomoproc.util.npmath    import rescale_image
-
+from   tomoproc.util.npmath    import binded_minus_log
 
 def denoise(
         sino: np.ndarray,
@@ -217,8 +217,8 @@ def correct_horizontal_jittering(
     # get the cnts from each 180 pairs
     cnts = [
         tomopy.find_center_pc(
-            rescale_image(minus_log(projs[nimg,:,:])), 
-            rescale_image(minus_log(projs[nimg+dn,:,:])), 
+            rescale_image(binded_minus_log(projs[nimg,:,:])), 
+            rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
             rotc_guess=projs.shape[2]/2,
             )   for nimg in range(dn)
     ]
