@@ -22,6 +22,7 @@ from   scipy.ndimage           import affine_transform
 from   tomoproc.prep.detection import detect_sample_in_sinogram
 from   tomoproc.prep.detection import detect_corrupted_proj
 from   tomoproc.prep.detection import detect_slit_corners
+from   tomoproc.prep.detection import detect_rotation_center
 from   tomoproc.util.npmath    import calc_affine_transform
 from   tomoproc.util.npmath    import rescale_image
 from   tomoproc.util.npmath    import binded_minus_log
@@ -216,13 +217,18 @@ def correct_horizontal_jittering(
         _, idx_good = detect_corrupted_proj(projs, omegas)
 
     # get the cnts from each 180 pairs
-    cnts = [
-        tomopy.find_center_pc(
-            rescale_image(binded_minus_log(projs[nimg,:,:])), 
-            rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
-            rotc_guess=projs.shape[2]/2,
-            )   for nimg in range(dn)
-    ]
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                tomopy.find_center_pc,
+                rescale_image(binded_minus_log(projs[nimg,:,:])), 
+                rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+            )
+            for nimg in range(dn)
+        ]
+    
+    cnts = [me.results() for me in _jobs]
+
     # 180 -> 360
     cnts = cnts + cnts
     shift_vals = [
@@ -310,7 +316,79 @@ def correct_detector_drifting(
     projs = np.stack([me.result() for me in _jobs], axis=0)
 
     return projs, affine_transform
+
+
+def correct_detector_tilt(
+    projs: np.ndarray, 
+    omegas: np.ndarray,
+    tor: int=1, 
+    nchunk: int=4,
+    ) -> np.ndarray:
+    """
+    Description
+    -----------
+    Due to detector mounting process, the vertical axis of the detector (hence
+    the image) might not be parallel to the actual rotation axis.  Therefore,
+    the projections need to be slighly rotated until the rotation axis is
+    parallel to the vertial axis of the image.
+
+    Parameters
+    ----------
+    projs: np.ndarray
+        Tomo imagestack with [axis_omega, axis_row, axis_col]
+    omegas: np.ndarray
+        rotary position array
+    tor: int
+        tolerance for horizontal shift in pixels
+    nchunk: int
+        number of subdivisions used to identify the rotation axis tilt
     
+    Returns
+    -------
+    np.ndarray
+        Correct projection images.
+    """
+    # calculate slab thickness (allow overlap)
+    _st = int(np.ceil(projs.shape[1]/nchunk))
+
+    _err = 10  #
+    _cnt = 0   #
+    while(_err > tor):
+        cnt_cols = [
+            detect_rotation_center(projs[:,n*_st:min((n+1)*_st, projs.shape[2]),:], omegas)
+            for n in range(nchunk)
+        ]
+        
+        cnt_col = np.average(cnt_cols)
+
+        # update the error
+        _err = np.max([abs(me-cnt_col) for me in cnt_cols])
+        _cnt = _cnt + 1
+
+        # safe guard and lazy update
+        if _cnt > 10000: break
+        if _err < tor: break
+
+        # calcualte the correction matrix
+        pts_src = np.array([[(n+0.5)*_st, cnt_cols[n]] for n in range(nchunk)])
+        pts_tgt = np.array([[(n+0.5)*_st, cnt_col    ] for n in range(nchunk)])
+        _afm = calc_affine_transform(pts_src, pts_tgt)
+
+        # -- apply the affine transformation to each frame
+        with cf.ProcessPoolExecutor() as e:
+            _jobs = [
+                e.submit(
+                    affine_transform,
+                    projs[n_omega,:,:],
+                    _afm[0:2,0:2],      # rotation
+                    offset=_afm[0:2,2]  # translation
+                )
+                for n_omega in range(projs.shape[0])
+            ]
+        projs = np.stack([me.result() for me in _jobs], axis=0)
+    
+    return projs
+
 
 if __name__ == "__main__":
     testimg = np.random.random((500,500))
