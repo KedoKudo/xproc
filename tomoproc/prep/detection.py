@@ -8,6 +8,7 @@ Provide functions that operate on projections
 
 import tomopy
 import numpy                     as     np
+import concurrent.futures        as     cf
 
 from   typing                    import Tuple
 from   scipy.signal              import medfilt
@@ -19,6 +20,8 @@ from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
 from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.peakfitting import fit_sigmoid
+from   tomoproc.util.npmath      import rescale_image
+from   tomoproc.util.npmath      import binded_minus_log
 
 
 def detect_sample_in_sinogram(
@@ -218,6 +221,43 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
         cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
     
     return cnrs
+
+
+def detect_rotation_center(
+    projs: np.ndarray, 
+    omegas: np.ndarray,
+    ) -> float:
+    """
+    Description
+    -----------
+    Use the phase-contrast method provided in tomopy to detect the rotation
+    center of given tomo image stack.
+
+    Parameters
+    ----------
+    projs: np.ndarray
+        Tomo imagestack with [axis_omega, axis_row, axis_col]
+    omegas: np.ndarray
+        rotary position array
+
+    Returns
+    -------
+    Rotation center horizontal position
+    """
+    # assume equal step, find the index range equals to 180 degree
+    dn = int(np.pi/(omegas[1] - omegas[0]))
+
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                tomopy.find_center_pc,
+                rescale_image(binded_minus_log(projs[nimg,:,:])), 
+                rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+            )
+            for nimg in range(dn)
+        ]
+
+    return np.average([me.result() for me in _jobs])
 
 
 if __name__ == "__main__":
