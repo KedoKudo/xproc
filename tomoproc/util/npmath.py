@@ -235,6 +235,29 @@ def rescale_image(
     return dynamic_range[0] + img*(dynamic_range[1] - dynamic_range[0])
 
 
+def binded_minus_log(arr: np.ndarray):
+    """
+    Description
+    -----------
+    Perform -log(arr) and zeros all nan values
+
+    Parameters
+    ----------
+    arr: np.ndarray
+        input array
+
+    Returns
+    -------
+    -log(arr) with values between (0, 1)
+
+    Note
+    ----
+    As a pure numpy function, it is not optimized for reconstruction purpose
+    due to potential large memory usage.
+    """
+    return -np.log(np.where(arr>0, arr, 1))
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
