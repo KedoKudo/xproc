@@ -11,7 +11,7 @@ This repository, __tomoproc__ provides necessary toolkits for the pre&amp;post p
 ```bash
 >> tomorpocer --help
 Usage:
-    tomoprocer.py molt     <CONFIGFILE>
+    tomoprocer.py morph    <CONFIGFILE>
     tomoprocer.py prep     <CONFIGFILE>
     tomoprocer.py recon    <CONFIGFILE>
     tomoprocer.py analyze  <CONFIGFILE>
