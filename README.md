@@ -26,7 +26,6 @@ Options:
 ## Required 3rd-party libraries
 
 * __tomopy__: conda install -c conda-forge tomopy
-* __tifffile__:  pip install tifffile
 * __docopt__: pip install docopt
 * __vtk__: pip install vtk
 
@@ -34,3 +33,6 @@ Options:
 ## Docker
 
 Container building recipe for using tomoproc.
+
+## Dev Note
+07-25-2019: It appears that __tomopy__ has to be installed before anything else to ensure dependencies within the package is resolved.
