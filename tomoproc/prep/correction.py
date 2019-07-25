@@ -315,7 +315,7 @@ def correct_detector_drifting(
         ]
     projs = np.stack([me.result() for me in _jobs], axis=0)
 
-    return projs, affine_transform
+    return projs, correction_matrix
 
 
 def correct_detector_tilt(
