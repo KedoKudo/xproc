@@ -33,3 +33,6 @@ Options:
 ## Docker
 
 Container building recipe for using tomoproc.
+
+## Dev Note
+07-25-2019: It appears that __tomopy__ has to be installed before anything else to ensure dependencies within the package is resolved.
