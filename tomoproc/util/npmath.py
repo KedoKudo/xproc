@@ -228,8 +228,8 @@ def rescale_image(
         Rescaled 2D image
     """
     # rescale to 0-1
-    img -= img.min()
-    img /= img.max()
+    img = img - img.min()
+    img = img / img.max()
 
     # rescale to dynamic range
     return dynamic_range[0] + img*(dynamic_range[1] - dynamic_range[0])
