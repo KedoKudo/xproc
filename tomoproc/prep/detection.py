@@ -101,13 +101,25 @@ def detect_corrupted_proj(
     dn = int(np.pi/(omegas[1] - omegas[0]))
 
     # get the cnts from each 180 pairs
-    cnts = [
-        tomopy.find_center_pc(
-            rescale_image(minus_log(projs[nimg,:,:])), 
-            rescale_image(minus_log(projs[nimg+dn,:,:])), 
-            rotc_guess=projs.shape[2]/2,
-            )   for nimg in range(dn)
-    ]
+    # use the faster version instead
+    with cf.ProcessPoolExecutor() as e:
+        _jobs = [
+            e.submit(
+                tomopy.find_center_pc,
+                rescale_image(binded_minus_log(projs[nimg,:,:])), 
+                rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+            )
+            for nimg in range(dn)
+        ]
+
+    cnts = [me.result() for me in _jobs]
+    # cnts = [
+    #     tomopy.find_center_pc(
+    #         rescale_image(minus_log(projs[nimg,:,:])), 
+    #         rescale_image(minus_log(projs[nimg+dn,:,:])), 
+    #         rotc_guess=projs.shape[2]/2,
+    #         )   for nimg in range(dn)
+    # ]
 
     # 180 -> 360
     cnts = np.array(cnts + cnts)
