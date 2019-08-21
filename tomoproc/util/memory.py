@@ -40,8 +40,8 @@ def fit_in_memory(datatype="float", size=(1024,1024), overhead_factor=1.1):
     """
     mem_available = psutil.virtual_memory().available
     # evaluated with np.random.random(1024,dtype=datatype)
-    # NOTE:
-    #  this should remain system independent
+    # TODO:
+    #   The calculation here is off
     _factor = {
         "float":    8192/1024,
         "float64":  8192/1024, "float32":  4096/1024, "float16":  2048/1024,
