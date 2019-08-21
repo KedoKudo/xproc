@@ -14,7 +14,7 @@ from   tomoproc.util.file   import load_yaml
 from   tomoproc.util.file   import recursive_save_dict_to_h5group
 from   tomoproc.util.logger import logger_default
 from   tomoproc.util.logger import log_exception
-
+from   tomoproc.util.memory import fit_in_memory
 
 @log_exception(logger_default)
 def pack_tiff_to_hdf5(fconfig:  str) -> None:
@@ -51,6 +51,8 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
         recursive_save_dict_to_h5group(h5f, '/config/', cfg_all)
 
         # get example image
+        # NOTE:
+        # assuming that _ is used to concatenate parital string names
         _padding = cfg['numpadding']
         _fn = f"{fnpre}_{str(cfg['front_white'][0]).zfill(_padding)}.{ffmt}"
         _img = imread(os.path.join(fpath, _fn))
@@ -65,10 +67,37 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
             'back_dark'  : '/exchange/data_white_dark',
             }.items():
             _nimgs = np.arange(cfg[k][0], cfg[k][1] + 1)
-            _dst = h5f.create_dataset(v, (len(_nimgs), _nrow, _ncol), dtype=_dtype)
-            for idx, n in enumerate(_nimgs):
-                _fn = f"{fnpre}_{str(n).zfill(_padding)}.{ffmt}"
-                _dst[idx,:,:] = imread(os.path.join(fpath, _fn))
+            if fit_in_memory(datatype='int16' ,size=(len(_nimgs), _nrow, _ncol), overhead_factor=0.5):
+                fns = [f"{fnpre}_{str(n).zfill(_padding)}.{ffmt}" for n in _nimgs]
+                fls = [os.path.join(fpath,me) for me in fns]
+                projs = np.empty((len(_nimgs), _nrow, _ncol), dtype=_dtype)
+                for n, fn in enumerate(fls):
+                    projs[n,:,:] = imread(fn)
+                # use best compression mode
+                _dst  = h5f.create_dataset(v, data=projs, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
+            else:
+                _dst = h5f.create_dataset(
+                    v, 
+                    (len(_nimgs), _nrow, _ncol),
+                    chunks=True,
+                    dtype=_dtype,
+                    compression="gzip", 
+                    compression_opts=9,
+                    )
+                # TODO:
+                # this loop is really slow, needs better ways to deal with it...
+                from tqdm import tqdm
+                for idx, n in tqdm(enumerate(_nimgs)):
+                    _fn = f"{fnpre}_{str(n).zfill(_padding)}.{ffmt}"
+                    _dst[idx,:,:] = imread(os.path.join(fpath, _fn))
+        
+        # add the theta array
+        omega_start = cfg['omega_start']
+        omega_delta = cfg['omega_step']
+        omega_len   = cfg['projections'][1] - cfg['projections'][0] + 1
+        omegas = np.arange(omega_start, omega_delta+omega_len*omega_delta, omega_delta)
+        _dst = h5f.create_dataset('omegas', data=omegas)
+
 
 
 @log_exception(logger_default)
