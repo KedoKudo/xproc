@@ -64,7 +64,7 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
             'front_white': '/exchange/data_white_pre',
             'projections': '/exchange/data',
             'back_white' : '/exchange/data_white_post',
-            'back_dark'  : '/exchange/data_white_dark',
+            'back_dark'  : '/exchange/data_dark_post',
             }.items():
             _nimgs = np.arange(cfg[k][0], cfg[k][1] + 1)
             if fit_in_memory(datatype='int16' ,size=(len(_nimgs), _nrow, _ncol), overhead_factor=0.5):
