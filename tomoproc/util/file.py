@@ -55,7 +55,7 @@ def recursive_load_h5group_to_dict(h5file: "h5py.File",
     ans = {}
     for key, item in h5file[path].items():
         if isinstance(item, h5py._hl.dataset.Dataset):
-            ans[key] = item.value
+            ans[key] = item[()]
         elif isinstance(item, h5py._hl.group.Group):
             ans[key] = recursive_load_h5group_to_dict(h5file, f"{path}{key}/")
     return ans
