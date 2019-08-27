@@ -63,7 +63,7 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
         omega_start = cfg['omegas']['start']
         omega_delta = cfg['omegas']['step']
         omega_len   = cfg['projections'][1] - cfg['projections'][0] + 1
-        omegas = np.arange(omega_start, omega_start+omega_len*omega_delta, omega_delta)
+        omegas = np.arange(omega_start, omega_start+(omega_len-0.5)*omega_delta, omega_delta)
         omegas = np.radians(omegas) if cfg['omegas']['unit'].lower() in ['deg', 'degree', 'degrees'] else omegas
         _dst = h5f.create_dataset('omegas', data=omegas)
 
