@@ -58,6 +58,14 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
         _img = imread(os.path.join(fpath, _fn))
         _nrow, _ncol = _img.shape
         _dtype = _img.dtype
+        
+        # add the theta array
+        omega_start = cfg['omegas']['start']
+        omega_delta = cfg['omegas']['step']
+        omega_len   = cfg['projections'][1] - cfg['projections'][0] + 1
+        omegas = np.arange(omega_start, omega_start+omega_len*omega_delta, omega_delta)
+        omegas = np.radians(omegas) if cfg['omegas']['unit'].lower() in ['deg', 'degree', 'degrees'] else omegas
+        _dst = h5f.create_dataset('omegas', data=omegas)
 
         # write four types of img stack to h5 archive
         for k, v in {
@@ -91,13 +99,6 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
                     _fn = f"{fnpre}_{str(n).zfill(_padding)}.{ffmt}"
                     _dst[idx,:,:] = imread(os.path.join(fpath, _fn))
         
-        # add the theta array
-        omega_start = cfg['omega_start']
-        omega_delta = cfg['omega_step']
-        omega_len   = cfg['projections'][1] - cfg['projections'][0] + 1
-        omegas = np.arange(omega_start, omega_delta+omega_len*omega_delta, omega_delta)
-        _dst = h5f.create_dataset('omegas', data=omegas)
-
 
 
 @log_exception(logger_default)
