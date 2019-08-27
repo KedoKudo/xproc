@@ -33,9 +33,9 @@ def write_yaml(fname: str, data: dict) -> None:
 
 
 @log_exception(logger_default)
-def write_h5(fname: str, data: dict) -> None:
+def write_h5(fname: str, data: dict, mode: str='a') -> None:
     """generic simper HDF5 archive writer"""
-    with h5py.File(fname, 'w') as f:
+    with h5py.File(fname, mode) as f:
         recursive_save_dict_to_h5group(f,'/',data)
 
 
