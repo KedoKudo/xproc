@@ -71,7 +71,15 @@ def recursive_save_dict_to_h5group(h5file: "h5py.File",
         if isinstance(item, dict):
             recursive_save_dict_to_h5group(h5file, path + key + '/', item)
         elif isinstance(item, list):
-            h5file[path + key] = np.array(item)
+            h5file.create_dataset(
+                path + key,
+                data=np.array(item),
+                chunks=True, 
+                compression="gzip",
+                compression_opts=9, 
+                shuffle=True,
+            )
+            #h5file[path + key] = np.array(item)
         else:
             h5file[path + key] = item
 
