@@ -4,19 +4,33 @@
 """tomoprocer
     morph: legacy data support
         convert tiff|binary to HDF5 archive for subsequent analysis
-    prep: perform (* optional, ! mandetoray)
-        * sinogram background normalization
-        * slit detection
-        * detector drift (translate+rotate) correction
-        * data reduction (corpping)
-        * stitching
-        ! -ln(img)
-        ! action logging to H5 archive
+    prep:  preprocessing tomography data
+                            ----------------
+                            |avaiable modes|
+                            ----------------
+        | ==========| === | === | === | === | ==== | ==== | === |
+        |           | inr | bgn | cdd | dcp | bifc | crop | dtc |
+        | --------- | --- | --- | --- | --- | ---- | ---- | --- |
+        | express   |  y  |  y  |  n  |  n  |  n   |  n   |  n  |
+        | lite      |  y  |  y  |  y  |  y  |  n   |  y   |  n  |
+        | royal     |  y  |  y  |  y  |  y  |  y   |  y   |  y  |
+        | customize |  ?  |  ?  |  ?  |  ?  |  ?   |  ?   |  ?  |
+        | ==========| === | === | === | === | ==== | ==== | === |
+        
+        * [inr]  impulse_noise_removal
+        * [bgn]  background_normalization               # sinogram method
+        * [cdd]  correct_detector_drifting              # through slit detection
+        * [dcp]  detect_corrupted_proj                  # through 180 deg pair matching
+        * [bifc] beam_intensity_fluctuation_correction  # through sinogram
+        # [crop] data reduction (corpping)
+        * [dtc]  correct_detector_tilt                  # rotation axis tilt correction
+
     recon: perform tomography reconstruction using external engine specified
            in configuration file
         * tomopy
         * tomoMPI
         * MIDAS (upcoming)
+
     analyze: perform specified analysis on reconstruction volume
         * porosity characterization
         * phase boundary detection
