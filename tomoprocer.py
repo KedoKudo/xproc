@@ -50,19 +50,39 @@ Options:
 """
 
 from docopt import docopt
-from tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
 
 if __name__ == "__main__":
     argvs = docopt(__doc__, argv=None, help=True, version="tomoprocer v0.0.1")
     print(argvs)
 
     if argvs['morph']:
+        # lazy import
+        from tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
         try:
             pack_tiff_to_hdf5(argvs['<CONFIGFILE>'])
         except:
             raise FileExistsError('remove previous generated H5 archive')
     elif argvs['prep']:
-        pass
+        # lazy import
+        from tomoproc.prep.detection  import detect_slit_corners
+        from tomoproc.prep.detection  import detect_corrupted_proj
+        from tomoproc.prep.detection  import detect_rotation_center
+        from tomoproc.prep.correction import correct_detector_drifting
+        from tomoproc.prep.correction import correct_detector_tilt
+        from tomoproc.prep.correction import denoise
+        from tomoproc.prep.correction import beam_intensity_fluctuation_correction as bifc
+        from tomoproc.util.file       import load_h5
+        from tomoproc.util.file       import load_yaml
+        # step_0: parse the configuration file
+        cfg = load_yaml(argvs['<CONFIGFILE>'])['tomo']  # only load the tomography related section
+
+        # step_1: based on the prep plan selected [express|full|customize] to provide a quick 
+        #         summary of the processing plan
+
+        # step_2: perform the auto-processing as described in previous step
+
+        # step_3: export the data to a HDF archive, compressed by default
+
     elif argvs['recon']:
         pass
     elif argvs['analyze']:
