@@ -32,6 +32,7 @@ Options:
 * __tomopy__: conda install -c conda-forge tomopy
 * __docopt__: pip install docopt
 * __vtk__: pip install vtk
+* __pyyaml__: conda install pyyaml
 
 
 ### Docker
