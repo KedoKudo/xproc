@@ -34,6 +34,7 @@ Options:
 * __vtk__: pip install vtk
 * __pyyaml__: conda install pyyaml
 * __lmfit__: conda install -c conda-forge lmfit
+* __tqdm__: conda install tqdm
 
 
 ### Docker
