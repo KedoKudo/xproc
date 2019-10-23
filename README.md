@@ -33,6 +33,7 @@ Options:
 * __docopt__: pip install docopt
 * __vtk__: pip install vtk
 * __pyyaml__: conda install pyyaml
+* __lmfit__: conda install -c conda-forge lmfit
 
 
 ### Docker
