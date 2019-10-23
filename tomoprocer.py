@@ -12,7 +12,7 @@
         |           | inr | bgn | cdd | dcp | bifc | crop | dtc |
         | --------- | --- | --- | --- | --- | ---- | ---- | --- |
         | express   |  y  |  y  |  n  |  n  |  n   |  n   |  n  |
-        | lite      |  y  |  y  |  y  |  y  |  n   |  y   |  n  |
+        | lite      |  y  |  y  |  y  |  y  |  y   |  y   |  n  |
         | royal     |  y  |  y  |  y  |  y  |  y   |  y   |  y  |
         | ==========| === | === | === | === | ==== | ==== | === |
         
@@ -125,20 +125,21 @@ def tomo_prep(cfg, verbose_output=False):
         proj = correct_detector_tilt(proj, omegas)
     
     # --
-    if verbose_output: print("normalize sinograms with multiprocessing")
-    def _bgadjust(img):
-        return denoise(bifc(img))
-    # use multi-processing to speed up
-    with cf.ProcessPoolExecutor() as e:
-        _jobs = [
-            e.submit(_bgadjust, proj[:,n,:]) 
-            for n in range(proj.shape[1])
-        ]
-    # execute
-    _proj = [me.result() for me in _jobs]
-    # map back
-    for n in tqdm(range(proj.shape[1])):
-        proj[:,n,:] = _proj[n]
+    if mode in ['lite', 'royal']:
+        if verbose_output: print("normalize sinograms with multiprocessing")
+        def _bgadjust(img):
+            return denoise(bifc(img))
+        # use multi-processing to speed up
+        with cf.ProcessPoolExecutor() as e:
+            _jobs = [
+                e.submit(_bgadjust, proj[:,n,:]) 
+                for n in range(proj.shape[1])
+            ]
+        # execute
+        _proj = [me.result() for me in _jobs]
+        # map back
+        for n in tqdm(range(proj.shape[1])):
+            proj[:,n,:] = _proj[n]
     
     # -log
     if verbose_output: print("-log")
