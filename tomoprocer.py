@@ -153,7 +153,7 @@ def tomo_prep(cfg, verbose_output=False):
 
     # time to write data back to HDF5 archive
     if verbose_output: print(f"writing data back to {h5fn}")
-    with open(h5fn, 'a') as _h5f:
+    with h5py.File(h5fn, 'a') as _h5f:
         _dst_omegas = _h5f.create_dataset('/tomoproc/omegas', data=omegas)
         _dst_proj = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
                         'type':        argvs['<CONFIGFILE>'].split(".")[-1].lower(),
                     },
                     'reconstruction': {
-                        'mode': 'express',
+                        'mode': 'lite',
                     }
                 }
             }
