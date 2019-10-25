@@ -199,7 +199,7 @@ def tomo_recon(cfg, verbose_output=False):
         print(f"reconstruction shape = {recon.shape}")
     # --
     if verbose_output: print("write to HDF5 archive")
-    _dst_recon = h5f.create_dataset("recon/auto", data=recon, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
+    _dst_recon = h5f.create_dataset("/tomoproc/recon_auto", data=recon, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
 
 
 if __name__ == "__main__":
