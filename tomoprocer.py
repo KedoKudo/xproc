@@ -181,7 +181,7 @@ def tomo_recon(cfg, verbose_output=False):
     try:
         if verbose_output: print("Try to located pre-processed sinogram...")
         omegas = h5f['/tomoproc/omegas'][:]
-        proj   = hf5['/tomoproc/proj'][:]
+        proj   = h5f['/tomoproc/proj'][:]
     except:
         if verbose_output: 
             print("cannot find pre-processed sinogram.")
