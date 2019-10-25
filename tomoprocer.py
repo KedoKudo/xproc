@@ -55,14 +55,20 @@ from docopt                   import docopt
 from tomoproc.util.file       import load_h5
 from tomoproc.util.file       import load_yaml
 
-def tomo_prep(cfg, verbose_output=False):
+
+def get_h5_file_name(cfg):
+    """Return the HDF5 file name based on the configuration file"""
+    from os.path import join
+    return join(cfg['output']['filepath'],  f"{cfg['output']['fileprefix']}.{cfg['output']['type']}")
+
+
+def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     """Pre-processing tomography data with given tomography configurations"""
     import tomopy
     import multiprocessing
     import h5py
     import numpy              as np
     import concurrent.futures as cf
-    from os.path                  import join
     from tomoproc.prep.detection  import detect_slit_corners
     from tomoproc.prep.detection  import detect_corrupted_proj
     from tomoproc.prep.detection  import detect_rotation_center
@@ -73,8 +79,7 @@ def tomo_prep(cfg, verbose_output=False):
     from tqdm                     import tqdm
     # --
     if verbose_output: print("loading H5 to memory (lazy evaluation)")
-    h5fn = join(cfg['output']['filepath'],  
-                f"{cfg['output']['fileprefix']}.{cfg['output']['type']}")
+    h5fn = get_h5_file_name(cfg)
     h5f = load_h5(h5fn)
     wfbg = h5f['exchange']['data_white_pre']
     proj = h5f['exchange']['data']
@@ -125,6 +130,10 @@ def tomo_prep(cfg, verbose_output=False):
         proj = correct_detector_tilt(proj, omegas)
     
     # --
+    # NOTE:
+    # TODO:
+    # For some unknown reason, the multiprocessing approach does not work here.
+    # Will investigate later.
     if mode in ['lite', 'royal']:
         if verbose_output: print("normalize sinograms with multiprocessing")
         for n in tqdm(range(proj.shape[1])):
@@ -150,17 +159,47 @@ def tomo_prep(cfg, verbose_output=False):
     proj[np.isinf(proj)] = 0
     proj[proj<0] = 0
 
-    # time to write data back to HDF5 archive
-    if verbose_output: print(f"writing data back to {h5fn}")
-    with h5py.File(h5fn, 'a') as _h5f:
-        _dst_omegas = _h5f.create_dataset('/tomoproc/omegas', data=omegas)
-        _dst_proj = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
+    # either 
+    #   - write data back to HDF5 archive
+    #   - return the intermedia results
+    if write_to_disk:
+        if verbose_output: print(f"writing data back to {h5fn}")
+        with h5py.File(h5fn, 'a') as _h5f:
+            _dst_omegas = _h5f.create_dataset('/tomoproc/omegas', data=omegas)
+            _dst_proj = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
+    else:
+        return proj, omegas
 
-
-def tomo_recon(config_tomo, compress_output=True):
+def tomo_recon(cfg, verbose_output=False):
     """Perform reconstruction using specified eigine"""
-    # if cannot find preped sinograms, invoke tomo_prep()
-    pass
+    import tomopy
+    import h5py
+    from tomoproc.prep.detection  import detect_rotation_center
+    # -- read sinograms into memory
+    h5fn = get_h5_file_name(cfg)
+    h5f = h5py.File(h5fn, 'a')
+    try:
+        if verbose_output: print("Try to located pre-processed sinogram...")
+        omegas = h5f['/tomoproc/omegas'][:]
+        proj   = hf5['/tomoproc/proj'][:]
+    except:
+        if verbose_output: 
+            print("cannot find pre-processed sinogram.")
+            print("start pre-processing now")
+        proj, omegas = tomo_prep(cfg, verbose_output=verbose_output, write_to_disk=False)
+    # --
+    rot_cnt = detect_rotation_center(proj, omegas)
+    if verbose_output:
+        print(f"proj.shape = {proj.shape}")
+        print(f"omegas.shape = {omegas.shape}")
+        print(f"rotation center = {rot_cnt}")
+    # --
+    recon = tomopy.recon(proj, omegas, center=rot_cnt, algorithm='gridrec', filter_name='hann')
+    if verbose_output:
+        print(f"reconstruction shape = {recon.shape}")
+    # --
+    if verbose_output: print("write to HDF5 archive")
+    _dst_recon = h5f.create_dataset("recon/auto", data=recon, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
 
 
 if __name__ == "__main__":
@@ -211,9 +250,10 @@ if __name__ == "__main__":
             tomo_prep(cfg_all['tomo'], verbose_output=verbose_output)
         else:
             raise ValueError("Please use config(yml) or h5 archive.")
-
     elif argvs['recon']:
-        pass
+        # perform reconstruction
+        cfg_all =load_yaml(argvs['<CONFIGFILE>'])
+        tomo_recon(cfg_all['tomo'], verbose_output=verbose_output)
     elif argvs['analyze']:
         pass
     else:
