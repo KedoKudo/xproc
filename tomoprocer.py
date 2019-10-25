@@ -188,6 +188,7 @@ def tomo_recon(cfg, verbose_output=False):
             print("start pre-processing now")
         proj, omegas = tomo_prep(cfg, verbose_output=verbose_output, write_to_disk=False)
     # --
+    if verbose_output: print("Locate rotation center...")
     rot_cnt = detect_rotation_center(proj, omegas)
     if verbose_output:
         print(f"proj.shape = {proj.shape}")
@@ -200,7 +201,12 @@ def tomo_recon(cfg, verbose_output=False):
     # --
     if verbose_output: print("write to HDF5 archive")
     _dst_recon = h5f.create_dataset("/tomoproc/recon_auto", data=recon, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
-
+    _dst_recon.attrs['engien'] = "tomopy"
+    _dst_recon.attrs['algorithm'] = "gridrec"
+    _dst_recon.attrs['filter_name'] = "hann"
+    _dst_recon.attrs['rotation_center'] = rot_cnt
+    h5f.close()
+    
 
 if __name__ == "__main__":
     argvs = docopt(__doc__, argv=None, help=True, version="tomoprocer v0.0.2")
