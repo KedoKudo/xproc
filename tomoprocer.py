@@ -178,7 +178,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         def _bgadjust(img):
             return denoise(bifc(img))
         # use multi-processing to speed up
-        with cf.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count() - 1) as e:
+        with cf.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() - 1) as e:
             _jobs = [
                 e.submit(_bgadjust, proj[:,n,:]) 
                 for n in range(proj.shape[1])
