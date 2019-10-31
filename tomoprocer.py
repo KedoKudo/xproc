@@ -173,21 +173,21 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # Will investigate later.
     if mode in ['lite', 'royal']:
         if verbose_output: print("normalize sinograms with multiprocessing")
-        for n in tqdm(range(proj.shape[1])):
-            proj[:,n,:] = denoise(bifc(proj[:,n,:]))
-        # def _bgadjust(img):
-        #     return denoise(bifc(img))
-        # # use multi-processing to speed up
-        # with cf.ProcessPoolExecutor() as e:
-        #     _jobs = [
-        #         e.submit(_bgadjust, proj[:,n,:]) 
-        #         for n in range(proj.shape[1])
-        #     ]
-        # # execute
-        # _proj = [me.result() for me in _jobs]
-        # # map back
         # for n in tqdm(range(proj.shape[1])):
-        #     proj[:,n,:] = _proj[n]
+        #     proj[:,n,:] = denoise(bifc(proj[:,n,:]))
+        def _bgadjust(img):
+            return denoise(bifc(img))
+        # use multi-processing to speed up
+        with cf.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count() - 1) as e:
+            _jobs = [
+                e.submit(_bgadjust, proj[:,n,:]) 
+                for n in range(proj.shape[1])
+            ]
+        # execute
+        _proj = [me.result() for me in _jobs]
+        # map back
+        for n in tqdm(range(proj.shape[1])):
+            proj[:,n,:] = _proj[n]
         _nodes.append('proj')
         _edges.append('bg normalize')
 
