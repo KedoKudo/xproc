@@ -32,7 +32,7 @@ def denoise(
         method: str='smd',
         config: dict={
             'kernel_size': 3,
-            'threshold': 0.5,
+            'threshold': 0.1,
             },
     ) -> np.ndarray:
     """

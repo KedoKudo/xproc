@@ -121,6 +121,17 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         print(f"Omega range:{omegas[0]} ~ {omegas[-1]} with step size of {delta_omega}")
     omegas = np.radians(omegas)
 
+    # -- noise reduction
+    e = cf.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() - 1)
+    _jobs = [e.submit(denoise, proj[n,:,:]) for n in range(proj.shape[0])]
+    # execute
+    _proj = [me.result() for me in _jobs]
+    # map back
+    for n in range(proj.shape[0]):
+        proj[n,:,:] = _proj[n]
+    _nodes.append('proj')
+    _edges.append('noise reduction')
+
     # -- correct detector drifting and crop data
     if mode in ['lite', 'royal']:
         if verbose_output: print("correct detector drifting")
@@ -178,11 +189,9 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         def _bgadjust(img):
             return denoise(bifc(img))
         # use multi-processing to speed up
-        with cf.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() - 1) as e:
-            _jobs = [
-                e.submit(_bgadjust, proj[:,n,:]) 
-                for n in range(proj.shape[1])
-            ]
+        _cpus = max(multiprocessing.cpu_count() - 3, 2)
+        e = cf.ThreadPoolExecutor(max_workers=_cpus)
+        _jobs = [ e.submit(_bgadjust, proj[:,n,:]) for n in range(proj.shape[1])]
         # execute
         _proj = [me.result() for me in _jobs]
         # map back
