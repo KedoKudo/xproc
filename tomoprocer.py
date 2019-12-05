@@ -125,7 +125,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     omegas = np.radians(omegas)
 
     # -- noise reduction
-    e = cf.ThreadPoolExecutor(max_workers=_cpus)
+    e = cf.ProcessPoolExecutor(max_workers=_cpus)
     _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
     # execute
     _proj = [me.result() for me in _jobs]
@@ -192,7 +192,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         def _bgadjust(img):
             return denoise(bifc(img))
         # use multi-processing to speed up
-        e = cf.ThreadPoolExecutor(max_workers=_cpus)
+        e = cf.ProcessPoolExecutor(max_workers=_cpus)
         _jobs = [ e.submit(_bgadjust, proj[:,n,:]) for n in range(proj.shape[1])]
         # execute
         _proj = [me.result() for me in _jobs]
