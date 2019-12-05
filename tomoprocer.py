@@ -104,7 +104,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     _edges = []
 
     # --
-    if verbose_output: print("loading H5 to memory (lazy evaluation)")
+    if verbose_output: print("loading H5 to memory")
     h5fn = get_h5_file_name(cfg)
     with h5py.File(h5fn, 'r') as _h5f:
         wfbg = _h5f['exchange']['data_white_pre'][()]
@@ -120,13 +120,13 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # --
     if verbose_output: print("extracting omegas")
 
-    try:
-        with h5py.File(h5fn, 'r') as _h5f:
-            omegas = _h5f['/omegas'][()]  # use omega list if possible
-            delta_omega = omegas[1] - omegas[0]
-    except:
-        delta_omega = (cfg['omega_end']-cfg['omega_start'])/(proj.shape[0]-1)
-        omegas = np.arange(cfg['omega_start'], cfg['omega_end']+delta_omega, delta_omega)
+    # try:
+    #     with h5py.File(h5fn, 'r') as _h5f:
+    #         omegas = _h5f['/omegas'][()]  # use omega list if possible
+    #         delta_omega = omegas[1] - omegas[0]
+    # except:
+    delta_omega = (cfg['omega_end']-cfg['omega_start'])/(proj.shape[0]-1)
+    omegas = np.arange(cfg['omega_start'], cfg['omega_end']+delta_omega, delta_omega)
     if verbose_output:
         print(f"Omega range:{omegas[0]} ~ {omegas[-1]} with step size of {delta_omega}")
     omegas = np.radians(omegas)
