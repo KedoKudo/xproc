@@ -95,6 +95,9 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     from tomoproc.prep.correction import denoise
     from tomoproc.prep.correction import beam_intensity_fluctuation_correction as bifc
     from tqdm                     import tqdm
+    # -- 
+    _cpus = max(multiprocessing.cpu_count() - 3, 2)
+
     # --
     mode = cfg['reconstruction']['mode']
     _nodes = []
@@ -122,7 +125,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     omegas = np.radians(omegas)
 
     # -- noise reduction
-    e = cf.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() - 1)
+    e = cf.ThreadPoolExecutor(max_workers=_cpus)
     _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
     # execute
     _proj = [me.result() for me in _jobs]
@@ -189,7 +192,6 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         def _bgadjust(img):
             return denoise(bifc(img))
         # use multi-processing to speed up
-        _cpus = max(multiprocessing.cpu_count() - 3, 2)
         e = cf.ThreadPoolExecutor(max_workers=_cpus)
         _jobs = [ e.submit(_bgadjust, proj[:,n,:]) for n in range(proj.shape[1])]
         # execute
