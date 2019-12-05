@@ -258,6 +258,8 @@ def detect_rotation_center(
     """
     # assume equal step, find the index range equals to 180 degree
     dn = int(np.pi/(omegas[1] - omegas[0]))
+    # prevent floating error leads to idx out of range error
+    dn = dn -1 if dn*2 > projs.shape[0] else dn
 
     with cf.ProcessPoolExecutor() as e:
         _jobs = [
