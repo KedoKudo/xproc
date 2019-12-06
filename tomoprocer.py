@@ -111,20 +111,9 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         proj = _h5f['exchange']['data'][()]
         wbbg = _h5f['exchange']['data_white_post'][()]
         dbbg = _h5f['exchange']['data_dark'][()]
-    # h5f = load_h5(h5fn)
-    # wfbg = h5f['exchange']['data_white_pre']
-    # proj = h5f['exchange']['data']
-    # wbbg = h5f['exchange']['data_white_post']
-    # dbbg = h5f['exchange']['data_dark']
 
     # --
     if verbose_output: print("extracting omegas")
-
-    # try:
-    #     with h5py.File(h5fn, 'r') as _h5f:
-    #         omegas = _h5f['/omegas'][()]  # use omega list if possible
-    #         delta_omega = omegas[1] - omegas[0]
-    # except:
     delta_omega = (cfg['omega_end']-cfg['omega_start'])/(proj.shape[0]-1)
     omegas = np.arange(cfg['omega_start'], cfg['omega_end']+delta_omega, delta_omega)
     if verbose_output:
@@ -241,11 +230,12 @@ def tomo_recon(cfg, verbose_output=False):
     from tomoproc.prep.detection  import detect_rotation_center
     # -- read sinograms into memory
     h5fn = get_h5_file_name(cfg)
-    h5f = h5py.File(h5fn, 'a')
+    # h5f = h5py.File(h5fn, 'a')
     try:
         if verbose_output: print("Try to located pre-processed sinogram...")
-        omegas = h5f['/tomoproc/omegas'][:]
-        proj   = h5f['/tomoproc/proj'][:]
+        with h5py.File(h5fn, 'r') as h5f:
+            omegas = h5f['/tomoproc/omegas'][()]
+            proj   = h5f['/tomoproc/proj'][()]
         _nodes = []
         _edges = []
     except:
@@ -271,12 +261,18 @@ def tomo_recon(cfg, verbose_output=False):
 
     # --
     if verbose_output: print("write to HDF5 archive")
-    _dst_recon = h5f.create_dataset("/tomoproc/recon_auto", data=recon, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
-    _dst_recon.attrs['engien'] = "tomopy"
-    _dst_recon.attrs['algorithm'] = "gridrec"
-    _dst_recon.attrs['filter_name'] = "hann"
-    _dst_recon.attrs['rotation_center'] = rot_cnt
-    h5f.close()
+    with h5py.File(h5fn, 'a') as h5f:
+        _dst_recon = h5f.create_dataset("/tomoproc/recon_auto", 
+                                        data=recon, 
+                                        chunks=True, 
+                                        compression="gzip", 
+                                        compression_opts=9, 
+                                        shuffle=True,
+                                    )
+        _dst_recon.attrs['engien'] = "tomopy"
+        _dst_recon.attrs['algorithm'] = "gridrec"
+        _dst_recon.attrs['filter_name'] = "hann"
+        _dst_recon.attrs['rotation_center'] = rot_cnt
 
     # -- 
     build_graph(h5fn, _nodes, _edges, fn=h5fn.split('.')[:-1]+"_recon.gv")
