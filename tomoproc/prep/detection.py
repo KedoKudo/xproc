@@ -266,7 +266,7 @@ def detect_rotation_center(
                 rescale_image(binded_minus_log(projs[nimg,:,:])), 
                 rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
             )
-            for nimg in range(projs.shape[0]/2-1)
+            for nimg in range(int(projs.shape[0]/2-1))
         ]
 
     return np.average([me.result() for me in _jobs])
