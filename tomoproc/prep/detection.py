@@ -238,6 +238,7 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
 def detect_rotation_center(
     projs: np.ndarray, 
     omegas: np.ndarray,
+    index_good: np.ndarray,
     ) -> float:
     """
     Description
@@ -251,6 +252,8 @@ def detect_rotation_center(
         Tomo imagestack with [axis_omega, axis_row, axis_col]
     omegas: np.ndarray
         rotary position array
+    index_good: np.ndarray
+        indices of uncorrupted frames
 
     Returns
     -------
@@ -266,10 +269,11 @@ def detect_rotation_center(
                 rescale_image(binded_minus_log(projs[nimg,:,:])), 
                 rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
             )
-            for nimg in range(int(projs.shape[0]/2-1))
+            for nimg in range(dn)
         ]
+    rot_cnts = np.array([me.result() for me in _jobs])
 
-    return np.average([me.result() for me in _jobs])
+    return np.average(rot_cnts[index_good])
 
 
 if __name__ == "__main__":

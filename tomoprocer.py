@@ -151,13 +151,11 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
         _nodes.append(f'proj:{_shape_before}->{_shape_after}')
         _edges.append('detect_slit_corners')
 
-        if verbose_output: print("remove corrupted frames")
+        if verbose_output: print("detect corrupted frames")
         idx_bad, idx_good = detect_corrupted_proj(proj, omegas)
         _shape_before = proj.shape
-        proj = proj[idx_good,:,:]
-        omegas = omegas[idx_good]
-        _shape_after = proj.shape
-        _nodes.append(f'proj:{_shape_before}->{_shape_after}')
+        _shape_after =  proj[idx_good,:,:].shape
+        _nodes.append(f'#bad_frames: {idx_bad.shape[0]}')
         _edges.append('detect_corrupted_proj')
         if verbose_output: print(f"corrupted frames ind:{idx_bad}")
     
@@ -213,13 +211,15 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     if write_to_disk:
         if verbose_output: print(f"writing data back to {h5fn}")
         with h5py.File(h5fn, 'a') as _h5f:
-            _dst_omegas = _h5f.create_dataset('/tomoproc/omegas', data=omegas)
-            _dst_corrm  = _h5f.create_dataset('/tomoproc/m_corr_drift', data=m_corr_drift)
-            _dst_proj   = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
+            _dst_omegas     = _h5f.create_dataset('/tomoproc/omegas', data=omegas)
+            _dst_corrm      = _h5f.create_dataset('/tomoproc/m_corr_drift', data=m_corr_drift)
+            _dst_index_good = _h5f.create_dataset('/tomoproc/idx_good', data=idx_good)
+            _dst_index_bad  = _h5f.create_dataset('/tomoproc/idx_bad', data=idx_bad)
+            _dst_proj       = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
         if verbose_output: print(f"Building processing graph")
         build_graph(h5fn, _nodes, _edges, fn=h5fn.split('.')[:-1]+"_prep.gv")
     else:
-        return proj, omegas, _nodes, _edges
+        return proj, omegas, idx_good, _nodes, _edges
 
 
 
@@ -234,18 +234,19 @@ def tomo_recon(cfg, verbose_output=False):
     try:
         if verbose_output: print("Try to located pre-processed sinogram...")
         with h5py.File(h5fn, 'r') as h5f:
-            omegas = h5f['/tomoproc/omegas'][()]
-            proj   = h5f['/tomoproc/proj'][()]
+            omegas     = h5f['/tomoproc/omegas'][()]
+            proj       = h5f['/tomoproc/proj'][()]
+            index_good = h5f['/tomoproc/idx_good'][()]
         _nodes = []
         _edges = []
     except:
         if verbose_output: 
             print("cannot find pre-processed sinogram.")
             print("start pre-processing now")
-        proj, omegas, _nodes, _edges= tomo_prep(cfg, verbose_output=verbose_output, write_to_disk=False)
+        proj, omegas, index_good, _nodes, _edges= tomo_prep(cfg, verbose_output=verbose_output, write_to_disk=False)
     # --
     if verbose_output: print("Locate rotation center...")
-    rot_cnt = detect_rotation_center(proj, omegas)
+    rot_cnt = detect_rotation_center(proj, omegas, index_good)
     if verbose_output:
         print(f"proj.shape = {proj.shape}")
         print(f"omegas.shape = {omegas.shape}")
@@ -254,7 +255,12 @@ def tomo_recon(cfg, verbose_output=False):
     _edges.append('detect_rotation_center')
     
     # --
-    recon = tomopy.recon(proj, omegas, center=rot_cnt, algorithm='gridrec', filter_name='hann')
+    recon = tomopy.recon(proj[index_good,:,:], 
+                         omegas[index_good], 
+                         center=rot_cnt, 
+                         algorithm='gridrec', 
+                         filter_name='hann',
+            )
     if verbose_output: print(f"reconstruction shape = {recon.shape}")
     _nodes.append('recon')
     _edges.append('tomopy_gridrec_hann')
