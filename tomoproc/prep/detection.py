@@ -258,8 +258,6 @@ def detect_rotation_center(
     """
     # assume equal step, find the index range equals to 180 degree
     dn = int(np.pi/(omegas[1] - omegas[0]))
-    # prevent floating error leads to idx out of range error
-    dn = dn -1 if dn*2 > projs.shape[0] else dn
 
     with cf.ProcessPoolExecutor() as e:
         _jobs = [
@@ -268,7 +266,7 @@ def detect_rotation_center(
                 rescale_image(binded_minus_log(projs[nimg,:,:])), 
                 rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
             )
-            for nimg in range(dn-1)
+            for nimg in range(projs.shape[0]/2-1)
         ]
 
     return np.average([me.result() for me in _jobs])
