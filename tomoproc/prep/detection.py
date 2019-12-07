@@ -272,6 +272,7 @@ def detect_rotation_center(
             for nimg in range(dn)
         ]
     rot_cnts = np.array([me.result() for me in _jobs])
+    rot_cnts = rot_cnts + rot_cnts
 
     return np.average(rot_cnts[index_good])
 
