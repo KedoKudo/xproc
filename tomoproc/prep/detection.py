@@ -73,7 +73,7 @@ def detect_sample_in_sinogram(
 def detect_corrupted_proj(
     projs: np.ndarray,
     omegas: np.ndarray,
-    threshold: float=0.2,
+    threshold: float=0.8,
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description
@@ -260,7 +260,7 @@ def detect_rotation_center(
     Rotation center horizontal position
     """
     # assume equal step, find the index range equals to 180 degree
-    dn = int(np.pi/(omegas[1] - omegas[0]))
+    dn = np.rint(np.pi/(omegas[1] - omegas[0])).astype(int)
 
     with cf.ProcessPoolExecutor() as e:
         _jobs = [
@@ -271,8 +271,8 @@ def detect_rotation_center(
             )
             for nimg in range(dn)
         ]
-    rot_cnts = np.array([me.result() for me in _jobs])
-    rot_cnts = rot_cnts + rot_cnts
+    rot_cnts = [me.result() for me in _jobs]
+    rot_cnts = np.array(rot_cnts + rot_cnts)
 
     return np.average(rot_cnts[index_good])
 
