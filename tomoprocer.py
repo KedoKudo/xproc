@@ -217,7 +217,8 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
             _dst_index_bad  = _h5f.create_dataset('/tomoproc/idx_bad', data=idx_bad)
             _dst_proj       = _h5f.create_dataset('/tomoproc/proj', data=proj, chunks=True, compression="gzip", compression_opts=9, shuffle=True)
         if verbose_output: print(f"Building processing graph")
-        build_graph(h5fn, _nodes, _edges, fn=h5fn.split('.')[:-1]+"_prep.gv")
+        _ext = h5fn.split('.')[-1]  # grab the file extension
+        build_graph(h5fn, _nodes, _edges, fn=h5fn.replace(_ext, "_prep.gv"))
     else:
         return proj, omegas, idx_good, _nodes, _edges
 
@@ -281,7 +282,8 @@ def tomo_recon(cfg, verbose_output=False):
         _dst_recon.attrs['rotation_center'] = rot_cnt
 
     # -- 
-    build_graph(h5fn, _nodes, _edges, fn=h5fn.split('.')[:-1]+"_recon.gv")
+    _ext = h5fn.split('.')[-1]  # grab the file extension
+    build_graph(h5fn, _nodes, _edges, fn=h5fn.replace(_ext,"_recon.gv"))
     
 
 if __name__ == "__main__":
