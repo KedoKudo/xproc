@@ -107,10 +107,10 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     if verbose_output: print("loading H5 to memory")
     h5fn = get_h5_file_name(cfg)
     with h5py.File(h5fn, 'r') as _h5f:
-        wfbg = _h5f['exchange']['data_white_pre'][()]
-        proj = _h5f['exchange']['data'][()]
-        wbbg = _h5f['exchange']['data_white_post'][()]
-        dbbg = _h5f['exchange']['data_dark'][()]
+        wfbg = np.array(_h5f['exchange']['data_white_pre'][()])
+        proj = np.array(_h5f['exchange']['data'][()])
+        wbbg = np.array(_h5f['exchange']['data_white_post'][()])
+        dbbg = np.array(_h5f['exchange']['data_dark'][()])
 
     # --
     if verbose_output: print("extracting omegas")
