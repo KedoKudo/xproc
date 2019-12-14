@@ -121,8 +121,10 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     omegas = np.radians(omegas)
 
     # -- noise reduction
-    e = cf.ProcessPoolExecutor(max_workers=_cpus)
-    _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
+    for n in tqdm(range(proj.shape[0])):
+        proj[n,:,:] = denoise(proj[n,:,:].astype(float))
+    # e = cf.ProcessPoolExecutor(max_workers=_cpus)
+    # _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
     # execute
     _proj = [me.result() for me in _jobs]
     # map back
