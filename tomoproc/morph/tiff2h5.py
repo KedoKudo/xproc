@@ -56,7 +56,8 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
         # assuming that _ is used to concatenate parital string names
         _padding = cfg['numpadding']
         _fn = f"{fnpre}_{str(cfg['front_white'][0]).zfill(_padding)}.{ffmt}"
-        _img = imread(os.path.join(fpath, _fn))
+        # _img = imread(os.path.join(fpath, _fn))
+        _img = imread(fpath + _fn) 
         _nrow, _ncol = _img.shape
         _dtype = _img.dtype
         
