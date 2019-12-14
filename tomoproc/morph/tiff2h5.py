@@ -46,7 +46,8 @@ def pack_tiff_to_hdf5(fconfig:  str) -> None:
     fnpre = cfg['file_prefix']
     ffmt  = cfg['file_format']
 
-    with h5py.File(os.path.join(fpath, f"{fnpre}.h5")) as h5f:
+    # with h5py.File(os.path.join(fpath, f"{fnpre}.h5")) as h5f:
+    with h5py.File(f"{fnpre}.h5") as h5f:
         # write the configuration
         recursive_save_dict_to_h5group(h5f, '/config/', cfg_all)
 
