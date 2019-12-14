@@ -126,10 +126,10 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # e = cf.ProcessPoolExecutor(max_workers=_cpus)
     # _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
     # execute
-    _proj = [me.result() for me in _jobs]
+    # _proj = [me.result() for me in _jobs]
     # map back
-    for n in range(proj.shape[0]):
-        proj[n,:,:] = _proj[n]
+    # for n in range(proj.shape[0]):
+    #     proj[n,:,:] = _proj[n]
     _nodes.append('proj')
     _edges.append('noise reduction')
 
