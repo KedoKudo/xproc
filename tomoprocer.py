@@ -121,8 +121,8 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     omegas = np.radians(omegas)
 
     # -- noise reduction
-    for n in tqdm(range(proj.shape[0])):
-        proj[n,:,:] = denoise(proj[n,:,:].astype(float))
+    # for n in tqdm(range(proj.shape[0])):
+    #     proj[n,:,:] = denoise(proj[n,:,:].astype(float))
     # e = cf.ProcessPoolExecutor(max_workers=_cpus)
     # _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
     # execute
@@ -130,8 +130,8 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # map back
     # for n in range(proj.shape[0]):
     #     proj[n,:,:] = _proj[n]
-    _nodes.append('proj')
-    _edges.append('noise reduction')
+    # _nodes.append('proj')
+    # _edges.append('noise reduction')
 
     # -- correct detector drifting and crop data
     if mode in ['lite', 'royal']:
