@@ -123,13 +123,19 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # -- noise reduction
     # for n in tqdm(range(proj.shape[0])):
     #     proj[n,:,:] = denoise(proj[n,:,:].astype(float))
-    with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
-        _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
-        # execute
-        _proj = [me.result() for me in _jobs]
-    # map back
-    for n in range(proj.shape[0]):
-        proj[n,:,:] = _proj[n]
+    # use 400 steps to prevent memory overflow
+    step = 400
+    for i_start in range(0, range(proj.shape[0]), step):
+        # use multiprocessing
+        i_end = min(i_start+step, proj.shape[0])
+        with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+            _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) 
+                        for n in range(i_start, i_end)]
+            # execute
+            _proj = [me.result() for me in _jobs]
+        # map back
+        for n in range(i_start, i_end):
+            proj[n,:,:] = _proj[n]
     _nodes.append('proj')
     _edges.append('noise reduction')
 
