@@ -134,8 +134,8 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
             # execute
             _proj = [me.result() for me in _jobs]
         # map back
-        for n in range(i_start, i_end):
-            proj[n,:,:] = _proj[n]
+        for n in range(_proj.shape[0]):
+            proj[i_start+n,:,:] = _proj[n]
     _nodes.append('proj')
     _edges.append('noise reduction')
 
