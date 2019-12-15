@@ -107,10 +107,10 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     if verbose_output: print("loading H5 to memory")
     h5fn = get_h5_file_name(cfg)
     with h5py.File(h5fn, 'r') as _h5f:
-        wfbg = np.array(_h5f['exchange']['data_white_pre'][()])
-        proj = np.array(_h5f['exchange']['data'][()])
-        wbbg = np.array(_h5f['exchange']['data_white_post'][()])
-        dbbg = np.array(_h5f['exchange']['data_dark'][()])
+        wfbg = _h5f['exchange']['data_white_pre'][()]
+        proj = _h5f['exchange']['data'][()]
+        wbbg = _h5f['exchange']['data_white_post'][()]
+        dbbg = _h5f['exchange']['data_dark'][()]
 
     # --
     if verbose_output: print("extracting omegas")
@@ -123,15 +123,15 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     # -- noise reduction
     # for n in tqdm(range(proj.shape[0])):
     #     proj[n,:,:] = denoise(proj[n,:,:].astype(float))
-    # e = cf.ProcessPoolExecutor(max_workers=_cpus)
-    # _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
-    # execute
-    # _proj = [me.result() for me in _jobs]
+    with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+        _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) for n in range(proj.shape[0])]
+        # execute
+        _proj = [me.result() for me in _jobs]
     # map back
-    # for n in range(proj.shape[0]):
-    #     proj[n,:,:] = _proj[n]
-    # _nodes.append('proj')
-    # _edges.append('noise reduction')
+    for n in range(proj.shape[0]):
+        proj[n,:,:] = _proj[n]
+    _nodes.append('proj')
+    _edges.append('noise reduction')
 
     # -- correct detector drifting and crop data
     if mode in ['lite', 'royal']:
