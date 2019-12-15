@@ -125,7 +125,7 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     #     proj[n,:,:] = denoise(proj[n,:,:].astype(float))
     # use 400 steps to prevent memory overflow
     step = 400
-    for i_start in range(0, range(proj.shape[0]), step):
+    for i_start in range(0, proj.shape[0], step):
         # use multiprocessing
         i_end = min(i_start+step, proj.shape[0])
         with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
