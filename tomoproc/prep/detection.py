@@ -130,7 +130,7 @@ def detect_corrupted_proj(
     return np.where(diff>threshold)[0], np.where(diff<=threshold)[0]
 
 
-def guess_slit_box(img: np.ndarray) -> dict:
+def guess_slit_box(img: np.ndarray, boost: bool=True) -> dict:
     """
     Description
     -----------
@@ -156,12 +156,13 @@ def guess_slit_box(img: np.ndarray) -> dict:
     tested on MacBookPro13,3
     395 ms ± 14 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
     """    
-    # Contrast stretching
-    pl, ph = np.percentile(img, (2, 98))
-    img = exposure.rescale_intensity(img, in_range=(pl, ph))
-    
-    # equilize hist
-    img = exposure.equalize_adapthist(img)
+    if boost:
+        # Contrast stretching
+        pl, ph = np.percentile(img, (2, 98))
+        img = exposure.rescale_intensity(img, in_range=(pl, ph))
+        
+        # equilize hist
+        img = exposure.equalize_adapthist(img)
     
     # map to log to reveal transition box
     img = np.log(medfilt2d(img.astype(float))+1)
@@ -206,31 +207,60 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
     drift correction.
     """
     # guess the rough location first
-    edges = guess_slit_box(img)
-    le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
-    
-    r_row, r_col = min(r, be-te-1), min(r, re-le-1)
-    
-    safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
-                                    (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
-                                   ]
-    
-    cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
-    
-    for i, cnr in enumerate(cnrs):
+    # by default use boost contrast, if failed, use raw image
+    try:
+        edges = guess_slit_box(img, boost=True)
+        le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
         
-        rowrange, colrange = safe_domain(*cnr)
-        domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
+        r_row, r_col = min(r, be-te-1), min(r, re-le-1)
         
-        horizontal_lp = np.average(domain, axis=0)
-        vertical_lp   = np.average(domain, axis=1)
+        safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
+                                        (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
+                                    ]
         
-        popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
-        _row = popt[0]
-        popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
-        _col = popt[0]
+        cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
         
-        cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
+        for i, cnr in enumerate(cnrs):
+            
+            rowrange, colrange = safe_domain(*cnr)
+            domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
+            
+            horizontal_lp = np.average(domain, axis=0)
+            vertical_lp   = np.average(domain, axis=1)
+            
+            popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
+            _row = popt[0]
+            popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
+            _col = popt[0]
+            
+            cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
+    except:
+        print("boost contrast leads to error, use raw image instead")
+        edges = guess_slit_box(img, boost=False)
+        le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
+        
+        r_row, r_col = min(r, be-te-1), min(r, re-le-1)
+        
+        safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
+                                        (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
+                                    ]
+        
+        cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
+        
+        for i, cnr in enumerate(cnrs):
+            
+            rowrange, colrange = safe_domain(*cnr)
+            domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
+            
+            horizontal_lp = np.average(domain, axis=0)
+            vertical_lp   = np.average(domain, axis=1)
+            
+            popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
+            _row = popt[0]
+            popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
+            _col = popt[0]
+            
+            cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
     
     return cnrs
 
