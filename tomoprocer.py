@@ -255,7 +255,9 @@ def tomo_recon(cfg, verbose_output=False):
         proj, omegas, index_good, _nodes, _edges= tomo_prep(cfg, verbose_output=verbose_output, write_to_disk=False)
     # --
     if verbose_output: print("Locate rotation center...")
-    rot_cnt = detect_rotation_center(proj, omegas, index_good)
+    # note: since -log step is already performed, we should avoid redoing it 
+    #       in the detection function
+    rot_cnt = detect_rotation_center(proj, omegas, index_good, do_minus_log=False)
     if verbose_output:
         print(f"proj.shape = {proj.shape}")
         print(f"omegas.shape = {omegas.shape}")

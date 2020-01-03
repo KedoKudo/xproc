@@ -269,6 +269,7 @@ def detect_rotation_center(
     projs: np.ndarray, 
     omegas: np.ndarray,
     index_good: np.ndarray,
+    do_minus_log: bool=True,
     ) -> float:
     """
     Description
@@ -293,14 +294,24 @@ def detect_rotation_center(
     dn = np.rint(np.pi/(omegas[1] - omegas[0])).astype(int)
 
     with cf.ProcessPoolExecutor() as e:
-        _jobs = [
-            e.submit(
-                tomopy.find_center_pc,
-                rescale_image(binded_minus_log(projs[nimg,:,:])), 
-                rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
-            )
-            for nimg in range(dn)
-        ]
+        if do_minus_log:
+            _jobs = [
+                e.submit(
+                    tomopy.find_center_pc,
+                    rescale_image(binded_minus_log(projs[nimg,:,:])), 
+                    rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+                )
+                for nimg in range(dn)
+            ]
+        else:
+            _jobs = [
+                e.submit(
+                    tomopy.find_center_pc,
+                    rescale_image(projs[nimg,:,:]), 
+                    rescale_image(projs[nimg+dn,:,:]), 
+                )
+                for nimg in range(dn)
+            ]
     rot_cnts = [me.result() for me in _jobs]
     rot_cnts = np.array(rot_cnts + rot_cnts)
 
