@@ -114,19 +114,20 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
 
     # --
     if verbose_output: print("extracting omegas")
-    delta_omega = (cfg['omega_end']-cfg['omega_start'])/(proj.shape[0]-1)
-    omegas = np.arange(cfg['omega_start'], cfg['omega_end']+delta_omega, delta_omega)
+    # delta_omega = (cfg['omega_end']-cfg['omega_start'])/(proj.shape[0]-1)
+    # omegas = np.arange(cfg['omega_start'], cfg['omega_end']+delta_omega, delta_omega)
+    omegas = np.linspace(cfg['omega_start'], cfg['omega_end'], proj.shape[0])
+    delta_omega = omegas[1] - omegas[0]
     if verbose_output:
         print(f"Omega range:{omegas[0]} ~ {omegas[-1]} with step size of {delta_omega}")
     omegas = np.radians(omegas)
 
     # -- noise reduction
-    # for n in tqdm(range(proj.shape[0])):
-    #     proj[n,:,:] = denoise(proj[n,:,:].astype(float))
     # use 720 steps to prevent memory overflow
     step = 720
+    if verbose_output: print(f'use step of {step} to avoid memory overflow')
+    # use multiprocessing to speed things up
     for i_start in range(0, proj.shape[0], step):
-        # use multiprocessing
         i_end = min(i_start+step, proj.shape[0])
         with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
             _jobs = [e.submit(denoise, proj[n,:,:].astype(float)) 
@@ -184,25 +185,46 @@ def tomo_prep(cfg, verbose_output=False, write_to_disk=True):
     
     # --
     # NOTE:
+    if mode in ['lite', 'royal']:
+        if verbose_output: print("normalize sinograms")
+        # use fix size slab to avoid memory issue
+        step = 64
+        for i_start in range(0, proj.shape[1], step):
+            i_end = min(i_start+step, proj.shape[1])
+            # use multi-processing
+            with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+                _jobs = [
+                    e.submit(bifc, proj[:,n,:].astype(float)) 
+                    for n in range(i_start, i_end)
+                    ]
+                # execute
+                _proj = [me.result() for me in _jobs]
+            # map back the denoised sinogram
+            for n, img in enumerate(_proj):
+                proj[:,i_start+n,:] = denoise(img)
+        
+        _nodes.append('proj')
+        _edges.append('bg normalize')
+
     # TODO:
     # For some unknown reason, the multiprocessing approach does not work here.
     # Will investigate later.
-    if mode in ['lite', 'royal']:
-        if verbose_output: print("normalize sinograms")
-        for n in tqdm(range(proj.shape[1])):
-            proj[:,n,:] = denoise(bifc(proj[:,n,:]))
-        # def _bgadjust(img):
-        #     return denoise(bifc(img))
-        # # use multi-processing to speed up
-        # e = cf.ProcessPoolExecutor(max_workers=_cpus)
-        # _jobs = [ e.submit(_bgadjust, proj[:,n,:]) for n in range(proj.shape[1])]
-        # # execute
-        # _proj = [me.result() for me in _jobs]
-        # # map back
-        # for n in tqdm(range(proj.shape[1])):
-        #     proj[:,n,:] = _proj[n]
-        _nodes.append('proj')
-        _edges.append('bg normalize')
+    # if mode in ['lite', 'royal']:
+    #     if verbose_output: print("normalize sinograms")
+    #     for n in tqdm(range(proj.shape[1])):
+    #         proj[:,n,:] = denoise(bifc(proj[:,n,:]))
+    # def _bgadjust(img):
+    #     return denoise(bifc(img))
+    # # use multi-processing to speed up
+    # e = cf.ProcessPoolExecutor(max_workers=_cpus)
+    # _jobs = [ e.submit(_bgadjust, proj[:,n,:]) for n in range(proj.shape[1])]
+    # # execute
+    # _proj = [me.result() for me in _jobs]
+    # # map back
+    # for n in tqdm(range(proj.shape[1])):
+    #     proj[:,n,:] = _proj[n]
+    # _nodes.append('proj')
+    # _edges.append('bg normalize')
 
     # -log
     if verbose_output: print("-log")
