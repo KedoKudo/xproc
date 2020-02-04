@@ -98,7 +98,7 @@ def detect_corrupted_proj(
         Return the indices of BAD frames and GOOD frames/projections
     """
     # assume equal step, find the index range equals to 180 degree
-    dn = int(np.pi/(omegas[1] - omegas[0]))
+    dn = int(np.pi/abs(omegas[1] - omegas[0]))
 
     # get the cnts from each 180 pairs
     # use the faster version instead
@@ -291,7 +291,8 @@ def detect_rotation_center(
     Rotation center horizontal position
     """
     # assume equal step, find the index range equals to 180 degree
-    dn = np.rint(np.pi/(omegas[1] - omegas[0])).astype(int)
+    # in case the omeage is increasing in the negative direction
+    dn = np.rint(np.pi/abs(omegas[1] - omegas[0])).astype(int)
 
     with cf.ProcessPoolExecutor() as e:
         if do_minus_log:
