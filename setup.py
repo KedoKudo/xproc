@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='tomoproc',  
-     version='0.0.1',
+     version='0.0.2',
      scripts=['tomoprocer.py'],
      author="KedoKudo",
      author_email="chenzhang8722@gmail.com",

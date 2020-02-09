@@ -6,6 +6,8 @@
 Provide functions that operate on projections
 """
 
+import itertools
+import multiprocessing
 import tomopy
 import numpy                     as     np
 import concurrent.futures        as     cf
@@ -15,13 +17,19 @@ from   scipy.signal              import medfilt
 from   scipy.signal              import medfilt2d
 from   scipy.ndimage             import gaussian_filter
 from   scipy.ndimage             import gaussian_filter1d
+from   scipy.spatial.distance    import pdist
+from   scipy.spatial.distance    import squareform
 from   skimage                   import exposure
+from   skimage.transform         import probabilistic_hough_line
+from   skimage.feature           import canny
+from   sklearn.cluster           import KMeans
 from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
 from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.peakfitting import fit_sigmoid
 from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.npmath      import binded_minus_log
+from   tomoproc.prep.correction  import denoise
 
 
 def detect_sample_in_sinogram(
@@ -317,6 +325,146 @@ def detect_rotation_center(
     rot_cnts = np.array(rot_cnts + rot_cnts)
 
     return np.average(rot_cnts[index_good])
+
+
+def get_pin_outline(
+    img_pin: np.ndarray, 
+    incrop:  int=61, 
+    adapthist_clip: float=0.01,
+    ) -> list:
+    """
+    Description
+    -----------
+        Using canny edge detection and Hough transformation to detect the
+        outline of a pin, which is commonly used for alignment of rotation
+        stages at MPE@APS.
+    
+    Parameters
+    ----------
+    img_pin: np.ndarray
+        input image with pin in the FOV
+    incrop: int
+        number of pixels to cropped into FOV to avoid interference of the slit blades
+    adapthist_clip: float
+        decrease it to supporess artifacts from scintillators and cam
+        
+    Returns
+    -------
+    list
+        line segments in image coordiantes for the pin outline
+    """
+    # use log to suppress scitilator artifacts 
+    img_pin = np.log(img_pin)
+    
+    # get the slit corner
+    cnrs = np.array(detect_slit_corners(img_pin))
+    
+    # get the cropping location
+    _minrow, _maxrow = int(min(cnrs[:,0])), int(max(cnrs[:,0]))
+    _mincol, _maxcol = int(min(cnrs[:,1])), int(max(cnrs[:,1]))
+    
+    # crop the img
+    # NOTE: agressisve incropping to avoid the edge detection interference from slits
+    
+    _img = exposure.rescale_intensity(
+        img_pin[_minrow+incrop : _maxrow-incrop, 
+                _mincol+incrop : _maxcol-incrop]
+    )
+    
+    # use canny + hough_line to get outline segment
+    _img = denoise(_img)
+    _img = exposure.equalize_adapthist(_img, clip_limit=adapthist_clip)
+    _edges = canny(_img, sigma=3)
+    _lines = probabilistic_hough_line(_edges,
+                                      threshold=10,  
+                                      line_length=7,  # Increase the parameter to extract longer lines.
+                                      line_gap=2,     # Decrease the number to allow more short segments
+                                     )
+    
+    return [[(pt[0]++_mincol+incrop, pt[1]+_minrow+incrop) for pt in line] for line in _lines] 
+
+
+def get_pin_tip(
+    img: np.ndarray, 
+    niter: int=12,
+    )->np.ndarray:
+    """
+    Description
+    -----------
+    Return a representative point as the tip of the pin
+
+    Parameters
+    ----------
+    img: np.ndarray
+        Input image with a pin in FOV
+    niter: int
+        Number of passes.  Increase this value can help counter occasional
+        bad outline detection as well as bad clustering (which could happen)
+    
+    Returns
+    -------
+    tuple
+        The 2D corrdinate of the pin in the raster scan frame
+          (0,0) --> Y   // raster frame
+          |
+          v    (tip[0], tip[1])
+          X
+        
+        To plot in matplotlib, we need to 
+        plt.imshow(img)           <-- raster frame
+        plt.plot(tip[1], tip[0])  <-- pyplot frame
+          (0,0) --> X   //pyplot frame
+          |
+          v
+          Y
+    """
+    # Get pin outline
+    # - using multiprocessing for better statistics
+    # - single processing code
+    #   lines = list(itertools.chain(*[get_pin_outline(img) for _ in range(niter)]))
+    # - will raise error if no pin present (empty list error)
+    _cpus = max(multiprocessing.cpu_count() - 2, 2)
+    with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+        # schedule
+        _jobs = [e.submit(get_pin_outline, img) for _ in range(niter)]
+        # execute
+        lines = list(itertools.chain(*[me.result() for me in _jobs]))
+
+    # cluster line segments into 3 group
+    # NOTE: better algorithm is needed to handle 1D data, using kmeans for now
+    thetas = [np.degrees(np.arctan2(abs(p1[1]-p0[1]), abs(p1[0]-p0[0]))) for p0,p1 in lines]
+    fv     = [(theta, theta) for theta in thetas]
+    lns    = [(p1[1]-p0[1])**2+(p1[0]-p0[0])**2 for p0,p1 in lines]
+    kmeans = KMeans(n_clusters=3, algorithm='full').fit(fv)
+    
+    # the tip should consist the shortest line collection
+    _linelen = [sum([ln for n, ln in enumerate(lns) if kmeans.labels_[n]==i]) for i in range(3)]
+    pts_tip  = list(itertools.chain(*[line for n, line in enumerate(lines) if kmeans.labels_[n]==_linelen.index(min(_linelen))]))
+    pts_tip  = get_center(pts_tip)
+
+    # cast the coordinate back to raster coordinate system
+    return (pts_tip[1], pts_tip[0])
+
+
+def get_center(points2d:np.ndarray) -> np.ndarray:
+    """
+    Description
+    -----------
+    Get center of 2D point cloud while minimizing effect of outliers using
+    inverse distance weighting
+
+    Parameters
+    ----------
+    img: np.ndarray
+        List of points, might contain outliers
+
+    Return
+    np.ndarray
+        Averaged center coordinates
+    """
+    points2d = np.array(points2d)  
+    cnt = np.average(points2d, axis=0)
+    return np.average(points2d, weights=(1/np.sqrt(np.sum((points2d-cnt)**2, axis=1)))**2, axis=0)
 
 
 if __name__ == "__main__":
