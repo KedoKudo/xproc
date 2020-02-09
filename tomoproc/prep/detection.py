@@ -29,7 +29,6 @@ from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.peakfitting import fit_sigmoid
 from   tomoproc.util.npmath      import rescale_image
 from   tomoproc.util.npmath      import binded_minus_log
-from   tomoproc.prep.correction  import denoise
 
 
 def detect_sample_in_sinogram(
@@ -372,7 +371,7 @@ def get_pin_outline(
     )
     
     # use canny + hough_line to get outline segment
-    _img = denoise(_img)
+    _img = medfilt2d(_img)
     _img = exposure.equalize_adapthist(_img, clip_limit=adapthist_clip)
     _edges = canny(_img, sigma=3)
     _lines = probabilistic_hough_line(_edges,
