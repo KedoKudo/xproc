@@ -388,7 +388,7 @@ def get_pin_outline(
             threshold=10,  
             line_length=7,  # Increase the parameter to extract longer lines.
             line_gap=2,     # Decrease the number to allow more short segments
-        )]
+            ) for _ in range(upsampling)]
         # # execute
         _lines = list(itertools.chain(*[me.result() for me in _jobs]))
 
