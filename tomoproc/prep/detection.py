@@ -330,6 +330,7 @@ def get_pin_outline(
     img_pin: np.ndarray, 
     incrop:  int=61, 
     adapthist_clip: float=0.01,
+    upsampling: int=12,
     ) -> list:
     """
     Description
@@ -346,6 +347,8 @@ def get_pin_outline(
         number of pixels to cropped into FOV to avoid interference of the slit blades
     adapthist_clip: float
         decrease it to supporess artifacts from scintillators and cam
+    upsampling: int
+        repeat hough transform to get more line segments of the same feature
         
     Returns
     -------
@@ -374,11 +377,26 @@ def get_pin_outline(
     _img = medfilt2d(_img)
     _img = exposure.equalize_adapthist(_img, clip_limit=adapthist_clip)
     _edges = canny(_img, sigma=3)
-    _lines = probabilistic_hough_line(_edges,
-                                      threshold=10,  
-                                      line_length=7,  # Increase the parameter to extract longer lines.
-                                      line_gap=2,     # Decrease the number to allow more short segments
-                                     )
+
+    # use multiprocessing for upsampling
+    _cpus = max(multiprocessing.cpu_count() - 2, 2)
+    with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+        # schedule
+        _jobs = [e.submit(
+            probabilistic_hough_line,
+            _edges,
+            threshold=10,  
+            line_length=7,  # Increase the parameter to extract longer lines.
+            line_gap=2,     # Decrease the number to allow more short segments
+        )]
+        # # execute
+        _lines = list(itertools.chain(*[me.result() for me in _jobs]))
+
+    # _lines = probabilistic_hough_line(_edges,
+    #                                   threshold=10,  
+    #                                   line_length=7,  # Increase the parameter to extract longer lines.
+    #                                   line_gap=2,     # Decrease the number to allow more short segments
+    #                                  )
     
     return [[(pt[0]++_mincol+incrop, pt[1]+_minrow+incrop) for pt in line] for line in _lines] 
 
@@ -420,14 +438,15 @@ def get_pin_tip(
     # Get pin outline
     # - using multiprocessing for better statistics
     # - single processing code
-    #   lines = list(itertools.chain(*[get_pin_outline(img) for _ in range(niter)]))
+    # lines = list(itertools.chain(*[get_pin_outline(img) for _ in range(niter)]))
     # - will raise error if no pin present (empty list error)
-    _cpus = max(multiprocessing.cpu_count() - 2, 2)
-    with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
-        # schedule
-        _jobs = [e.submit(get_pin_outline, img) for _ in range(niter)]
-        # execute
-        lines = list(itertools.chain(*[me.result() for me in _jobs]))
+    # _cpus = max(multiprocessing.cpu_count() - 2, 2)
+    # with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
+    #     # schedule
+    #     _jobs = [e.submit(get_pin_outline, img) for _ in range(niter)]
+    #     # execute
+    #     lines = list(itertools.chain(*[me.result() for me in _jobs]))
+    lines = get_pin_outline(img, upsampling=niter)
 
     # cluster line segments into 3 group
     # NOTE: better algorithm is needed to handle 1D data, using kmeans for now
