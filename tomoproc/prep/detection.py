@@ -20,7 +20,6 @@ from   scipy.ndimage             import gaussian_filter1d
 from   scipy.spatial.distance    import pdist
 from   scipy.spatial.distance    import squareform
 from   skimage                   import exposure
-from   skimage.exposure          import match_histograms
 from   skimage.transform         import probabilistic_hough_line
 from   skimage.feature           import canny
 from   skimage.feature           import register_translation
