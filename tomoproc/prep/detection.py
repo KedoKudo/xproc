@@ -22,7 +22,9 @@ from   scipy.spatial.distance    import squareform
 from   skimage                   import exposure
 from   skimage.transform         import probabilistic_hough_line
 from   skimage.feature           import canny
+from   skimage.feature           import register_translation
 from   sklearn.cluster           import KMeans
+from   lmfit.models              import GaussianModel
 from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
 from   tomoproc.util.npmath      import rescale_image
@@ -367,7 +369,6 @@ def get_pin_outline(
     
     # crop the img
     # NOTE: agressisve incropping to avoid the edge detection interference from slits
-    
     _img = exposure.rescale_intensity(
         img_pin[_minrow+incrop : _maxrow-incrop, 
                 _mincol+incrop : _maxcol-incrop]
@@ -391,12 +392,6 @@ def get_pin_outline(
             ) for _ in range(upsampling)]
         # # execute
         _lines = list(itertools.chain(*[me.result() for me in _jobs]))
-
-    # _lines = probabilistic_hough_line(_edges,
-    #                                   threshold=10,  
-    #                                   line_length=7,  # Increase the parameter to extract longer lines.
-    #                                   line_gap=2,     # Decrease the number to allow more short segments
-    #                                  )
     
     return [[(pt[0]++_mincol+incrop, pt[1]+_minrow+incrop) for pt in line] for line in _lines] 
 
@@ -477,6 +472,7 @@ def get_center(points2d:np.ndarray) -> np.ndarray:
         List of points, might contain outliers
 
     Return
+    ------
     np.ndarray
         Averaged center coordinates
     """
@@ -484,6 +480,79 @@ def get_center(points2d:np.ndarray) -> np.ndarray:
     cnt = np.average(points2d, axis=0)
     return np.average(points2d, weights=(1/np.sqrt(np.sum((points2d-cnt)**2, axis=1)))**2, axis=0)
 
+
+def get_pin_vertical_offset(
+    img_0: np.ndarray, 
+    img180: np.ndarray,
+    ) -> float:
+    """
+    Description
+    -----------
+    Calculate the vertical offset between a 180 degree pair of pin during alingment, which can
+    be used to calculate the amount of additinal tilt adjustment needed to level the SMS.
+
+    Parameters
+    ----------
+    img_0: np.ndarray
+        img taken at omega=0
+    img_180: np.ndarray
+        img taken at omega=180
+    
+    Return
+    ------
+    Offset from img_180 to img_0.  For example               
+        if offset > 0:  img_180 is higher than img_0
+                        img_180
+                img_0
+        if offset < 0:  img_180 if lower than img_0
+                img_0
+                        img_180
+    """
+    shift, _, _ = register_translation(img_0, img180, upsample_factor=100)
+    return shift[0]
+
+
+def get_pin_rotation_center(
+    img_0: np.ndarray,
+    img_180: np.ndarray,
+    ) -> Tuple:
+    """
+    Description
+    -----------
+    Using simple curve fitting to locate the rotation center of a 180-pair 
+    image of pin during alignment
+
+    Parameters
+    ----------
+    img_0: np.ndarray
+        img taken at omega=0
+    img_180: np.ndarray
+        img taken at omega=180
+
+    Return
+    ------
+    rot_center: float
+        rotation center
+    p1_center: float
+        pixel position of the first peak center
+    p2_center: float
+        pixel position of the second peak center
+    """
+    # only work for horizontal pin for now, should be easy to adapt to vertical pin
+    _prof = np.average(img_0, axis=0) - np.average(exposure.match_histograms(img_180, img_0), axis=0)
+    # fit a two peak profile
+    mod = GaussianModel(prefix='p1_') + GaussianModel(prefix='p2_')
+    out = mod.fit(_prof, x=np.arange(_prof.shape[0]), 
+                  p1_center=np.argmax(_prof),
+                  p2_center=np.argmin(_prof),
+                )
+    return (
+            (out.best_values['p1_center']+out.best_values['p2_center'])/2,     # rotation center
+            out.best_values['p1_center'],                                      # first peak center
+            out.best_values['p2_center'],                                      # second peak center
+    )
+
+    
 
 if __name__ == "__main__":
     projs = np.random.random((360,60,60))
