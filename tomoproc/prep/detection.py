@@ -539,14 +539,19 @@ def get_pin_rotation_center(
         pixel position of the second peak center
     """
     # only work for horizontal pin for now, should be easy to adapt to vertical pin
-    # _prof = np.average(img_0, axis=0) - np.average(match_histograms(img_180, img_0), axis=0)
-    _prof = np.average(img_0, axis=0) - np.average(img_180, axis=0)
+    try:
+        _prof = np.average(img_0, axis=0) - np.average(match_histograms(img_180, img_0), axis=0)
+    except:
+        _prof = np.average(img_0, axis=0) - np.average(img_180, axis=0)
+        print("Cannot invoke match_histogram, please check scikit-image version")
+
     # fit a two peak profile
     mod = GaussianModel(prefix='p1_') + GaussianModel(prefix='p2_')
     out = mod.fit(_prof, x=np.arange(_prof.shape[0]), 
                   p1_center=np.argmax(_prof),
                   p2_center=np.argmin(_prof),
                 )
+
     return (
             (out.best_values['p1_center']+out.best_values['p2_center'])/2,     # rotation center
             out.best_values['p1_center'],                                      # first peak center
