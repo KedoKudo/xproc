@@ -123,13 +123,6 @@ def detect_corrupted_proj(
         ]
 
     cnts = [me.result() for me in _jobs]
-    # cnts = [
-    #     tomopy.find_center_pc(
-    #         rescale_image(minus_log(projs[nimg,:,:])), 
-    #         rescale_image(minus_log(projs[nimg+dn,:,:])), 
-    #         rotc_guess=projs.shape[2]/2,
-    #         )   for nimg in range(dn)
-    # ]
 
     # 180 -> 360
     cnts = np.array(cnts + cnts)
@@ -432,16 +425,6 @@ def get_pin_tip(
           Y
     """
     # Get pin outline
-    # - using multiprocessing for better statistics
-    # - single processing code
-    # lines = list(itertools.chain(*[get_pin_outline(img) for _ in range(niter)]))
-    # - will raise error if no pin present (empty list error)
-    # _cpus = max(multiprocessing.cpu_count() - 2, 2)
-    # with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
-    #     # schedule
-    #     _jobs = [e.submit(get_pin_outline, img) for _ in range(niter)]
-    #     # execute
-    #     lines = list(itertools.chain(*[me.result() for me in _jobs]))
     lines = get_pin_outline(img, upsampling=niter)
 
     # cluster line segments into 3 group
@@ -625,6 +608,11 @@ def get_beam_origin(
         _vfit = _vmod.fit(_vp, x=np.arange(_vp.shape[0]), vp_center=len(_vp)/2)
         
         # rms
+        # minimizing the assymetry of the beam proflie in both directions to
+        # the best we can.
+        # NOTE: 
+        #   The beam is not always symmetric, and we need (kind of) symmetric
+        #   beam for ff-HEDM and nf-HEDM scan.
         return np.sqrt(
               0.5*(_hfit.best_values['hp_center']- len(_hp)/2)**2 \
             + 0.5*(_vfit.best_values['vp_center']- len(_vp)/2)**2
