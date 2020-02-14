@@ -10,6 +10,7 @@ import itertools
 import multiprocessing
 import tomopy
 import numpy                     as     np
+import scipy                     as     sp
 import concurrent.futures        as     cf
 
 from   typing                    import Tuple
@@ -557,6 +558,85 @@ def get_pin_rotation_center(
             out.best_values['p1_center'],                                      # first peak center
             out.best_values['p2_center'],                                      # second peak center
     )
+
+
+def get_beam_origin(
+    img:np.ndarray, 
+    slit_cnrs:np.ndarray=None, 
+    size:Tuple=(500, 500),
+    ) -> Tuple:
+    """
+    Description
+    -----------
+    Return the image coordinate (row, col) of the supposed beamcenter that provides the most homogeneous 
+    beam proflie
+    
+    Parameters
+    ----------
+    img: np.ndarray
+        Input image with only slits
+    slit_cnrs: np.ndarray
+        Image coordinates of the four corners defined by the slits
+    size: (int, int)
+        (row, col) size of the desired FOV.  A 500x500 FOV is commonly used to located the beamcenter.
+        NOTE: smaller size often helps, but it should be depending on the actual FOV intended for the experiment
+        
+    Returns
+    -------
+    Tuple
+    The image coordinates (row, col) of the beam center.  In ImageJ, this coordinate is displayed as (col, row).
+    """
+    # sanity check to make sure the FOV is not too large
+    if size[0] > img.shape[0]:
+        raise ValueError("FOV is way too large in vertical direction")
+    if size[1] > img.shape[1]:
+        raise ValueError("FOV is way too large in horizontal direction")
+    # get the domain size
+    _srow, _scol = size
+    
+    # detect slit corner is not provided
+    slit_cnrs = np.array(detect_slit_corners(img)) if slit_cnrs is None else np.array(slit_cnrs)
+    slit_top, slit_bot = int(min(slit_cnrs[:,0])), int(max(slit_cnrs[:,0]))
+    slit_lft, slit_rgt = int(min(slit_cnrs[:,1])), int(max(slit_cnrs[:,1]))
+        
+    # avoid impact of noisy pixels (defects in detector)
+    img = medfilt2d(img.astype(float))
+    
+    # find the brightest spot in the image, use it as a starting point
+    _beamcenter = np.unravel_index(np.argmax(img, axis=None), img.shape)  # print(x_b, y_b, img[y_b, x_b])
+    
+    # form bounds as contraints
+    def _row_in_range(beamcenter):
+        return -1*(beamcenter[0]-slit_top+_srow/2)*(beamcenter[0]-slit_bot+_srow/2)
+    def _col_in_range(beamcenter):
+        return -1*(beamcenter[1]-slit_lft+_scol/2)*(beamcenter[1]-slit_rgt+_scol/2)
+    
+    # define objective function
+    def _obj(beamcenter):
+        _r, _c = beamcenter.astype(int)
+        _data = img[_r-_srow:_r+_srow, _c-_scol:_c+_scol]
+        
+        _hp = np.average(_data, axis=0)
+        _hmod = GaussianModel(prefix='hp_')
+        _hfit = _hmod.fit(_hp, x=np.arange(_hp.shape[0]), hp_center=len(_hp)/2)
+        
+        _vp = np.average(_data, axis=1)
+        _vmod = GaussianModel(prefix='vp_')
+        _vfit = _vmod.fit(_vp, x=np.arange(_vp.shape[0]), vp_center=len(_vp)/2)
+        
+        # rms
+        return np.sqrt(
+              0.5*(_hfit.best_values['hp_center']- len(_hp)/2)**2 \
+            + 0.5*(_vfit.best_values['vp_center']- len(_vp)/2)**2
+        )
+    
+    _rst = sp.optimize.minimize(_obj, _beamcenter,
+                               constraints=({'type': 'ineq', 'fun':  _row_in_range },
+                                            {'type': 'ineq', 'fun':  _col_in_range },
+                                           ),
+                               method='COBYLA',
+                              )
+    return _rst.x
 
     
 
