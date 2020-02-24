@@ -496,51 +496,54 @@ def get_pin_vertical_offset(
     return shift[0]
 
 
-def get_pin_rotation_center(
-    img_0: np.ndarray,
-    img_180: np.ndarray,
-    ) -> Tuple:
-    """
-    Description
-    -----------
-    Using simple curve fitting to locate the rotation center of a 180-pair 
-    image of pin during alignment
+# def get_pin_rotation_center(
+#     img_0: np.ndarray,
+#     img_180: np.ndarray,
+#     ) -> Tuple:
+#     """
+#     Description
+#     -----------
+#     Using simple curve fitting to locate the rotation center of a 180-pair 
+#     image of pin during alignment
 
-    Parameters
-    ----------
-    img_0: np.ndarray
-        img taken at omega=0
-    img_180: np.ndarray
-        img taken at omega=180
+#     Parameters
+#     ----------
+#     img_0: np.ndarray
+#         img taken at omega=0
+#     img_180: np.ndarray
+#         img taken at omega=180
 
-    Return
-    ------
-    rot_center: float
-        rotation center
-    p1_center: float
-        pixel position of the first peak center
-    p2_center: float
-        pixel position of the second peak center
-    """
-    # only work for horizontal pin for now, should be easy to adapt to vertical pin
-    try:
-        _prof = np.average(img_0, axis=0) - np.average(match_histograms(img_180, img_0), axis=0)
-    except:
-        _prof = np.average(img_0, axis=0) - np.average(img_180, axis=0)
-        print("Cannot invoke match_histogram, please check scikit-image version")
+#     Return
+#     ------
+#     rot_center: float
+#         rotation center
+#     p1_center: float
+#         pixel position of the first peak center
+#     p2_center: float
+#         pixel position of the second peak center
 
-    # fit a two peak profile
-    mod = GaussianModel(prefix='p1_') + GaussianModel(prefix='p2_')
-    out = mod.fit(_prof, x=np.arange(_prof.shape[0]), 
-                  p1_center=np.argmax(_prof),
-                  p2_center=np.argmin(_prof),
-                )
+#     NOTE
+#     Deprecated due to decreasing accuracy with pin closing to rotation axis
+#     """
+#     # only work for horizontal pin for now, should be easy to adapt to vertical pin
+#     try:
+#         _prof = np.average(img_0, axis=0) - np.average(match_histograms(img_180, img_0), axis=0)
+#     except:
+#         _prof = np.average(img_0, axis=0) - np.average(img_180, axis=0)
+#         print("Cannot invoke match_histogram, please check scikit-image version")
 
-    return (
-            (out.best_values['p1_center']+out.best_values['p2_center'])/2,     # rotation center
-            out.best_values['p1_center'],                                      # first peak center
-            out.best_values['p2_center'],                                      # second peak center
-    )
+#     # fit a two peak profile
+#     mod = GaussianModel(prefix='p1_') + GaussianModel(prefix='p2_')
+#     out = mod.fit(_prof, x=np.arange(_prof.shape[0]), 
+#                   p1_center=np.argmax(_prof),
+#                   p2_center=np.argmin(_prof),
+#                 )
+
+#     return (
+#             (out.best_values['p1_center']+out.best_values['p2_center'])/2,     # rotation center
+#             out.best_values['p1_center'],                                      # first peak center
+#             out.best_values['p2_center'],                                      # second peak center
+#     )
 
 
 def get_beam_origin(
