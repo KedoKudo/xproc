@@ -468,7 +468,7 @@ def get_center(points2d:np.ndarray) -> np.ndarray:
 
 def get_pin_vertical_offset(
     img_0: np.ndarray, 
-    img180: np.ndarray,
+    img_180: np.ndarray,
     ) -> float:
     """
     Description
@@ -495,8 +495,8 @@ def get_pin_vertical_offset(
                         img_180
     """
     img_0 = _safe_read_img(img_0)
-    img180 = _safe_read_img(img_180)
-    shift, _, _ = register_translation(img_0, img180, upsample_factor=100)
+    img_180 = _safe_read_img(img_180)
+    shift, _, _ = register_translation(img_0, img_180, upsample_factor=100)
     return shift[0]
 
 
