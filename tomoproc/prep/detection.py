@@ -25,6 +25,7 @@ from   skimage.transform         import probabilistic_hough_line
 from   skimage.feature           import canny
 from   skimage.feature           import register_translation
 from   sklearn.cluster           import KMeans
+from   tifffile                  import imread
 from   lmfit.models              import GaussianModel
 from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
@@ -472,8 +473,9 @@ def get_pin_vertical_offset(
     """
     Description
     -----------
-    Calculate the vertical offset between a 180 degree pair of pin during alingment, which can
-    be used to calculate the amount of additinal tilt adjustment needed to level the SMS.
+    Calculate the vertical offset (related to wedge angle) between a 180 
+    degree pair of pin during alingment, which can be used to calculate the 
+    amount of additinal tilt adjustment needed to level the SMS.
 
     Parameters
     ----------
@@ -492,6 +494,8 @@ def get_pin_vertical_offset(
                 img_0
                         img_180
     """
+    img_0 = _safe_read_img(img_0)
+    img180 = _safe_read_img(img_180)
     shift, _, _ = register_translation(img_0, img180, upsample_factor=100)
     return shift[0]
 
@@ -572,6 +576,8 @@ def get_beam_origin(
     Tuple
     The image coordinates (row, col) of the beam center.  In ImageJ, this coordinate is displayed as (col, row).
     """
+    img = _safe_read_img(img)
+
     # sanity check to make sure the FOV is not too large
     if size[0] > img.shape[0]:
         raise ValueError("FOV is way too large in vertical direction")
@@ -629,7 +635,79 @@ def get_beam_origin(
                               )
     return _rst.x
 
-    
+
+def fit_pin(
+    img_pin:    np.ndarray, 
+    img_white:  np.ndarray, 
+    side_mount: bool=False,
+    ) -> float:
+    """
+    Description
+    -----------
+    Use Gaussian peak fit to locate the center of the peak.
+
+    Parameters
+    ----------
+    img_pin: np.ndarray
+        Tomo image containing a pin
+    img_white: np.ndarray
+        White field image, which should have the same FOV of img_pin minus the
+        pin
+    side_mount: bool
+        If the pin is mounted sideway (very rare due to statibility issue),
+        toggle this option to True.
+
+    Returns
+    -------
+    float
+        The sub-pixel position of the center of the Gaussian peak that best
+        fit the profile of the pin
+    """
+    _ax = 1 if side_mount else 0
+    img_pin = _safe_read_img(img_pin)
+    img_white = _safe_read_img(img_white)
+    _pf = np.average(img_white.astype(float)-img_pin.astype(float), axis=_ax)
+    _mod = GaussianModel(prefix='pin_')
+    _fit = _mod.fit(_pf, x=np.arange(len(_pf)), pin_center= len(_pf)/2)
+    return _fit.best_values['pin_center']
+
+
+def get_rotation_center(
+    img_pin_0: np.ndarray, 
+    img_pin_180: np.ndarray, 
+    img_white:np.ndarray, 
+    side_mount=False,
+    ) -> float:
+    """
+    Description
+    -----------
+    Return the rotation center (in pixel) for given 180 degree pairs
+
+    Parameters
+    ----------
+    img_pin_0: np.ndarray
+        pin image at 0 deg
+    img_pin_180: np.ndarray
+        pin image at 180 deg
+    img_white: np.ndarray
+        white field image
+    side_mount: bool
+        If the pin is mounted horizontally (very rare)
+
+    Returns
+    -------
+    Rotation center in pixels 
+    """
+    return 0.5*(fit_pin(img_pin_0, img_white, side_mount)+fit_pin(img_pin_180, img_white, side_mount))
+
+
+def _safe_read_img(img):
+    """
+    Read in tiff image if a path is given instead of np object.
+    """
+    img = imread(img) if isinstance(img, str) else np.array(img)
+    return img
+
 
 if __name__ == "__main__":
     projs = np.random.random((360,60,60))
