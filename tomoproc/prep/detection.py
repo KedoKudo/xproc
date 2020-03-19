@@ -212,6 +212,7 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
     """
     # guess the rough location first
     # by default use boost contrast, if failed, use raw image
+    img = _safe_read_img(img)
     try:
         edges = guess_slit_box(img, boost=True)
         le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
