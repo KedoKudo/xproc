@@ -7,6 +7,7 @@ Provide functions that operate on projections
 """
 
 import itertools
+import warnings
 import multiprocessing
 import tomopy
 import numpy                     as     np
