@@ -27,6 +27,7 @@ from   skimage.feature           import register_translation
 from   sklearn.cluster           import KMeans
 from   tifffile                  import imread
 from   lmfit.models              import GaussianModel
+from   lmfit.models              import LorentzianModel
 from   tomopy                    import minus_log
 from   tomopy                    import find_center_pc
 from   tomoproc.util.npmath      import rescale_image
@@ -665,12 +666,39 @@ def fit_pin(
         fit the profile of the pin
     """
     _ax = 1 if side_mount else 0
-    img_pin = _safe_read_img(img_pin)
-    img_white = _safe_read_img(img_white)
-    _pf = np.average(img_white.astype(float)-img_pin.astype(float), axis=_ax)
-    _mod = GaussianModel(prefix='pin_')
-    _fit = _mod.fit(_pf, x=np.arange(len(_pf)), pin_center= len(_pf)/2)
-    return _fit.best_values['pin_center']
+    
+    _pin = _safe_read_img(img_pin  ).astype(float)
+    _bg  = _safe_read_img(img_white).astype(float)
+    
+    # detect corners
+    cnrs = np.array(detect_slit_corners(_pin))
+    l = int(cnrs[:,1].min())+13
+    r = int(cnrs[:,1].max())-13
+    t = int(cnrs[:,0].min())-13
+    b = int(cnrs[:,0].max())+13
+    
+    _pf_pin = np.average(_pin, axis=_ax)[t:b] if side_mount else np.average(_pin, axis=_ax)[l:r]
+    _pf_bg  = np.average(_bg,  axis=_ax)[t:b] if side_mount else np.average(_bg,  axis=_ax)[l:r]
+    
+    # rescale bg to match pin image to counter
+    # 1. beam intensity fluctuation
+    # 2. exposure time change
+    # 3. other artifacts that leads to sudden change in image intensity
+    _pf_bg = (_pf_bg-_pf_bg.min())/(_pf_bg.max()-_pf_bg.min())*(_pf_pin.max()-_pf_pin.min()) + _pf_pin.min()
+    
+    _pf = (_pf_bg**2 - _pf_pin**2)/_pf_bg**2
+    _pf[_pf<0] = 0
+    _pf = np.power(_pf/_pf.max(), 5)
+    
+    _mod = LorentzianModel(prefix='pin_')
+    _fit = _mod.fit(_pf, x=np.arange(_pf.shape[0]), pin_center= np.argmax(_pf))
+    
+    if 0<_fit.best_values['pin_center']<_pf.shape[0]:
+        return _fit.best_values['pin_center']+t if side_mount else _fit.best_values['pin_center']+l
+    else:
+        warnings.warn('Using Edge detection as backup, less accurate, might fail')
+        peak = get_pin_tip(_safe_read_img(img_pin).astype(float))
+        return peak[0] if side_mount else peak[1]
 
 
 def get_rotation_center(
