@@ -707,7 +707,7 @@ def _safe_read_img(img):
     Read in tiff image if a path is given instead of np object.
     """
     img = imread(img) if isinstance(img, str) else np.array(img)
-    return img
+    return np.nan_to_num(img)
 
 
 if __name__ == "__main__":
