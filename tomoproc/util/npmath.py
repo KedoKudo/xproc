@@ -5,11 +5,12 @@
 Usefule numpy based calculations
 """
 
-import numpy         as     np
-import scipy         as     sp
+import numpy as np
+import scipy as sp
 
-from   typing        import Tuple
-from   numpy.linalg  import norm
+from typing import Tuple
+from numpy.linalg import norm
+
 
 def normalize(vec: np.ndarray, axis=None) -> np.ndarray:
     """
@@ -33,15 +34,14 @@ def normalize(vec: np.ndarray, axis=None) -> np.ndarray:
     """
     vec = np.array(vec, dtype=np.float64)
     if axis is None:
-        return vec/norm(vec)
+        return vec / norm(vec)
     else:
-        return np.divide(vec,
-                         np.tile(norm(vec, axis=axis),
-                                 vec.shape[axis],
-                                 ).reshape(vec.shape,
-                                           order='F' if axis == 1 else 'C',
-                                           )
-                         )
+        return np.divide(
+            vec,
+            np.tile(norm(vec, axis=axis), vec.shape[axis],).reshape(
+                vec.shape, order="F" if axis == 1 else "C",
+            ),
+        )
 
 
 def random_three_vector() -> np.ndarray:
@@ -60,7 +60,7 @@ def random_three_vector() -> np.ndarray:
     np.ndarray
         randomly oriented 3D vector
     """
-    phi = np.random.uniform(0, np.pi*2)
+    phi = np.random.uniform(0, np.pi * 2)
     costheta = np.random.uniform(-1, 1)
 
     theta = np.arccos(costheta)
@@ -157,16 +157,16 @@ def discrete_cdf(data: np.ndarray, steps=None) -> tuple:
         x = x[np.arange(0, len(x), int(np.ceil(len(x) / steps)))]
 
     # calculate the cumulative density
-    xx = np.tile(x, (2, 1)).flatten(order='F')
+    xx = np.tile(x, (2, 1)).flatten(order="F")
     y = np.arange(len(x))
-    yy = np.vstack((y, y + 1)).flatten(order='F') / float(y[-1])
+    yy = np.vstack((y, y + 1)).flatten(order="F") / float(y[-1])
 
     return xx, yy
 
 
-def calc_affine_transform(pts_source: np.ndarray, 
-                          pts_target: np.ndarray,
-        ) -> np.ndarray:
+def calc_affine_transform(
+    pts_source: np.ndarray, pts_target: np.ndarray,
+) -> np.ndarray:
     """
     Description
     -----------
@@ -196,7 +196,8 @@ def calc_affine_transform(pts_source: np.ndarray,
 
     """
     # augment data with padding to include translation
-    def pad(x): return np.hstack([x, np.ones((x.shape[0], 1))])
+    def pad(x):
+        return np.hstack([x, np.ones((x.shape[0], 1))])
 
     # NOTE:
     #   scipy affine_transform performs as np.dot(m, vec),
@@ -207,9 +208,8 @@ def calc_affine_transform(pts_source: np.ndarray,
 
 
 def rescale_image(
-    img: np.ndarray,
-    dynamic_range: Tuple[float, float] = (0, 1),
-    ) -> np.ndarray:
+    img: np.ndarray, dynamic_range: Tuple[float, float] = (0, 1),
+) -> np.ndarray:
     """
     Description
     -----------
@@ -232,7 +232,7 @@ def rescale_image(
     img = img / img.max()
 
     # rescale to dynamic range
-    return dynamic_range[0] + img*(dynamic_range[1] - dynamic_range[0])
+    return dynamic_range[0] + img * (dynamic_range[1] - dynamic_range[0])
 
 
 def binded_minus_log(arr: np.ndarray):
@@ -255,9 +255,10 @@ def binded_minus_log(arr: np.ndarray):
     As a pure numpy function, it is not optimized for reconstruction purpose
     due to potential large memory usage.
     """
-    return -np.log(np.where(arr>0, arr, 1))
+    return -np.log(np.where(arr > 0, arr, 1))
 
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

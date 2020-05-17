@@ -15,10 +15,10 @@ True
 """
 
 import psutil
-import numpy  as np
+import numpy as np
 
 
-def fit_in_memory(datatype="float", size=(1024,1024), overhead_factor=1.1):
+def fit_in_memory(datatype="float", size=(1024, 1024), overhead_factor=1.1):
     """
     Description
     -----------
@@ -43,16 +43,21 @@ def fit_in_memory(datatype="float", size=(1024,1024), overhead_factor=1.1):
     # TODO:
     #   The calculation here is off
     _factor = {
-        "float":    8192/1024,
-        "float64":  8192/1024, "float32":  4096/1024, "float16":  2048/1024,
-        "int":      8192/1024,
-        "int64":    8192/1024, "int32":    4096/1024, "int16":    2048/1024,
-        "bool":     1024/1024,
-    }[datatype.lower()]*overhead_factor
+        "float": 8192 / 1024,
+        "float64": 8192 / 1024,
+        "float32": 4096 / 1024,
+        "float16": 2048 / 1024,
+        "int": 8192 / 1024,
+        "int64": 8192 / 1024,
+        "int32": 4096 / 1024,
+        "int16": 2048 / 1024,
+        "bool": 1024 / 1024,
+    }[datatype.lower()] * overhead_factor
     mem_need = np.prod(size) * _factor
     return mem_available > mem_need
 
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

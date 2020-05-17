@@ -10,39 +10,39 @@ import itertools
 import warnings
 import multiprocessing
 import tomopy
-import numpy                     as     np
-import scipy                     as     sp
-import concurrent.futures        as     cf
+import numpy as np
+import scipy as sp
+import concurrent.futures as cf
 
-from   typing                    import Tuple
-from   scipy.signal              import medfilt
-from   scipy.signal              import medfilt2d
-from   scipy.ndimage             import gaussian_filter
-from   scipy.ndimage             import gaussian_filter1d
-from   scipy.spatial.distance    import pdist
-from   scipy.spatial.distance    import squareform
-from   skimage                   import exposure
-from   skimage.transform         import probabilistic_hough_line
-from   skimage.feature           import canny
-from   skimage.feature           import register_translation
-from   sklearn.cluster           import KMeans
-from   tifffile                  import imread
-from   lmfit.models              import GaussianModel
-from   lmfit.models              import LorentzianModel
-from   tomopy                    import minus_log
-from   tomopy                    import find_center_pc
-from   tomoproc.util.npmath      import rescale_image
-from   tomoproc.util.peakfitting import fit_sigmoid
-from   tomoproc.util.npmath      import rescale_image
-from   tomoproc.util.npmath      import binded_minus_log
+from typing import Tuple
+from scipy.signal import medfilt
+from scipy.signal import medfilt2d
+from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter1d
+from scipy.spatial.distance import pdist
+from scipy.spatial.distance import squareform
+from skimage import exposure
+from skimage.transform import probabilistic_hough_line
+from skimage.feature import canny
+from skimage.feature import register_translation
+from sklearn.cluster import KMeans
+from tifffile import imread
+from lmfit.models import GaussianModel
+from lmfit.models import LorentzianModel
+from tomopy import minus_log
+from tomopy import find_center_pc
+from tomoproc.util.npmath import rescale_image
+from tomoproc.util.peakfitting import fit_sigmoid
+from tomoproc.util.npmath import rescale_image
+from tomoproc.util.npmath import binded_minus_log
 
 
 def detect_sample_in_sinogram(
     sino: np.ndarray,
-    kernel_size: int=3,
-    sigma: int=50,
-    minimum_distance_to_edge: int=5,
-    ) -> Tuple[int, int]:
+    kernel_size: int = 3,
+    sigma: int = 50,
+    minimum_distance_to_edge: int = 5,
+) -> Tuple[int, int]:
     """
     Description
     -----------
@@ -65,29 +65,24 @@ def detect_sample_in_sinogram(
     (int, int)
         left and right edge of the sample region
     """
-    # use median filter and gaussian filter to locate the sample region 
+    # use median filter and gaussian filter to locate the sample region
     # -- median filter is to counter impulse noise
     # -- gaussian filter is for estimating the sample location
     prf = np.gradient(
         np.sum(
-            gaussian_filter(
-                medfilt2d(sino, kernel_size=kernel_size), 
-                sigma=sigma,
-                ),
+            gaussian_filter(medfilt2d(sino, kernel_size=kernel_size), sigma=sigma,),
             axis=0,
-            )
         )
-    return  (
-        max(prf.argmin(), minimum_distance_to_edge), 
-        min(prf.argmax(), sino.shape[1]-minimum_distance_to_edge),
-        )
+    )
+    return (
+        max(prf.argmin(), minimum_distance_to_edge),
+        min(prf.argmax(), sino.shape[1] - minimum_distance_to_edge),
+    )
 
 
 def detect_corrupted_proj(
-    projs: np.ndarray,
-    omegas: np.ndarray,
-    threshold: float=0.8,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    projs: np.ndarray, omegas: np.ndarray, threshold: float = 0.8,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description
     -----------
@@ -111,7 +106,7 @@ def detect_corrupted_proj(
         Return the indices of BAD frames and GOOD frames/projections
     """
     # assume equal step, find the index range equals to 180 degree
-    dn = int(np.pi/abs(omegas[1] - omegas[0]))
+    dn = int(np.pi / abs(omegas[1] - omegas[0]))
 
     # get the cnts from each 180 pairs
     # use the faster version instead
@@ -119,8 +114,8 @@ def detect_corrupted_proj(
         _jobs = [
             e.submit(
                 tomopy.find_center_pc,
-                rescale_image(binded_minus_log(projs[nimg,:,:])), 
-                rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+                rescale_image(binded_minus_log(projs[nimg, :, :])),
+                rescale_image(binded_minus_log(projs[nimg + dn, :, :])),
             )
             for nimg in range(dn)
         ]
@@ -131,12 +126,12 @@ def detect_corrupted_proj(
     cnts = np.array(cnts + cnts)
 
     # locate outlier
-    diff = np.absolute(cnts - medfilt(cnts))/cnts
+    diff = np.absolute(cnts - medfilt(cnts)) / cnts
 
-    return np.where(diff>threshold)[0], np.where(diff<=threshold)[0]
+    return np.where(diff > threshold)[0], np.where(diff <= threshold)[0]
 
 
-def guess_slit_box(img: np.ndarray, boost: bool=True) -> dict:
+def guess_slit_box(img: np.ndarray, boost: bool = True) -> dict:
     """
     Description
     -----------
@@ -161,31 +156,31 @@ def guess_slit_box(img: np.ndarray, boost: bool=True) -> dict:
     Relative fast:
     tested on MacBookPro13,3
     395 ms ± 14 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    """    
+    """
     if boost:
         # Contrast stretching
         pl, ph = np.percentile(img, (2, 98))
         img = exposure.rescale_intensity(img, in_range=(pl, ph))
-        
+
         # equilize hist
         img = exposure.equalize_adapthist(img)
-    
+
     # map to log to reveal transition box
-    img = np.log(medfilt2d(img.astype(float))+1)
-    
+    img = np.log(medfilt2d(img.astype(float)) + 1)
+
     # get row and col profile gradient
     pdot_col = np.gradient(gaussian_filter1d(np.average(img, axis=0), sigma=11))
     pdot_row = np.gradient(gaussian_filter1d(np.average(img, axis=1), sigma=11))
 
     return {
-        'left':  np.argmax(pdot_col),
-        'right': np.argmin(pdot_col),
-        'top':   np.argmax(pdot_row),
-        'bot':   np.argmin(pdot_row),
+        "left": np.argmax(pdot_col),
+        "right": np.argmin(pdot_col),
+        "top": np.argmax(pdot_row),
+        "bot": np.argmin(pdot_row),
     }
 
 
-def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
+def detect_slit_corners(img: np.ndarray, r: float = 50) -> list:
     """
     Description
     -----------
@@ -217,67 +212,69 @@ def detect_slit_corners(img: np.ndarray, r: float=50) -> list:
     img = _safe_read_img(img)
     try:
         edges = guess_slit_box(img, boost=True)
-        le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
-        
-        r_row, r_col = min(r, be-te-1), min(r, re-le-1)
-        
-        safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
-                                        (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
-                                    ]
-        
+        le, re, te, be = edges["left"], edges["right"], edges["top"], edges["bot"]
+
+        r_row, r_col = min(r, be - te - 1), min(r, re - le - 1)
+
+        safe_domain = lambda row, col: [
+            (max(row - r_row, 0), min(row + r_row + 1, img.shape[0])),
+            (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
+        ]
+
         cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
-        
+
         for i, cnr in enumerate(cnrs):
-            
+
             rowrange, colrange = safe_domain(*cnr)
-            domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
-            
+            domain = img[rowrange[0] : rowrange[1], colrange[0] : colrange[1]]
+
             horizontal_lp = np.average(domain, axis=0)
-            vertical_lp   = np.average(domain, axis=1)
-            
+            vertical_lp = np.average(domain, axis=1)
+
             popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
             _row = popt[0]
             popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
             _col = popt[0]
-            
-            cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
+
+            cnrs[i] = (rowrange[0] + _row, colrange[0] + _col)
     except:
         print("boost contrast leads to error, use raw image instead")
         edges = guess_slit_box(img, boost=False)
-        le,re,te,be = edges['left'], edges['right'], edges['top'], edges['bot']
-        
-        r_row, r_col = min(r, be-te-1), min(r, re-le-1)
-        
-        safe_domain = lambda row, col: [(max(row - r_row, 0), min(row + r_row + 1, img.shape[0])), 
-                                        (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
-                                    ]
-        
+        le, re, te, be = edges["left"], edges["right"], edges["top"], edges["bot"]
+
+        r_row, r_col = min(r, be - te - 1), min(r, re - le - 1)
+
+        safe_domain = lambda row, col: [
+            (max(row - r_row, 0), min(row + r_row + 1, img.shape[0])),
+            (max(col - r_col, 0), min(col + r_col + 1, img.shape[1])),
+        ]
+
         cnrs = [(te, le), (be, le), (be, re), (te, re)]  # (row, col)
-        
+
         for i, cnr in enumerate(cnrs):
-            
+
             rowrange, colrange = safe_domain(*cnr)
-            domain = img[rowrange[0]:rowrange[1], colrange[0]:colrange[1]]
-            
+            domain = img[rowrange[0] : rowrange[1], colrange[0] : colrange[1]]
+
             horizontal_lp = np.average(domain, axis=0)
-            vertical_lp   = np.average(domain, axis=1)
-            
+            vertical_lp = np.average(domain, axis=1)
+
             popt, _ = fit_sigmoid(np.arange(len(vertical_lp)), vertical_lp)
             _row = popt[0]
             popt, _ = fit_sigmoid(np.arange(len(horizontal_lp)), horizontal_lp)
             _col = popt[0]
-            
-            cnrs[i] = (rowrange[0]+_row, colrange[0]+_col)
-    
+
+            cnrs[i] = (rowrange[0] + _row, colrange[0] + _col)
+
     return cnrs
 
 
 def detect_rotation_center(
-    projs: np.ndarray, 
+    projs: np.ndarray,
     omegas: np.ndarray,
     index_good: np.ndarray,
-    do_minus_log: bool=True,
-    ) -> float:
+    do_minus_log: bool = True,
+) -> float:
     """
     Description
     -----------
@@ -299,15 +296,15 @@ def detect_rotation_center(
     """
     # assume equal step, find the index range equals to 180 degree
     # in case the omeage is increasing in the negative direction
-    dn = np.rint(np.pi/abs(omegas[1] - omegas[0])).astype(int)
+    dn = np.rint(np.pi / abs(omegas[1] - omegas[0])).astype(int)
 
     with cf.ProcessPoolExecutor() as e:
         if do_minus_log:
             _jobs = [
                 e.submit(
                     tomopy.find_center_pc,
-                    rescale_image(binded_minus_log(projs[nimg,:,:])), 
-                    rescale_image(binded_minus_log(projs[nimg+dn,:,:])), 
+                    rescale_image(binded_minus_log(projs[nimg, :, :])),
+                    rescale_image(binded_minus_log(projs[nimg + dn, :, :])),
                 )
                 for nimg in range(dn)
             ]
@@ -315,8 +312,8 @@ def detect_rotation_center(
             _jobs = [
                 e.submit(
                     tomopy.find_center_pc,
-                    rescale_image(projs[nimg,:,:]), 
-                    rescale_image(projs[nimg+dn,:,:]), 
+                    rescale_image(projs[nimg, :, :]),
+                    rescale_image(projs[nimg + dn, :, :]),
                 )
                 for nimg in range(dn)
             ]
@@ -327,11 +324,11 @@ def detect_rotation_center(
 
 
 def get_pin_outline(
-    img_pin: np.ndarray, 
-    incrop:  int=61, 
-    adapthist_clip: float=0.01,
-    upsampling: int=12,
-    ) -> list:
+    img_pin: np.ndarray,
+    incrop: int = 61,
+    adapthist_clip: float = 0.01,
+    upsampling: int = 12,
+) -> list:
     """
     Description
     -----------
@@ -355,23 +352,24 @@ def get_pin_outline(
     list
         line segments in image coordiantes for the pin outline
     """
-    # use log to suppress scitilator artifacts 
+    # use log to suppress scitilator artifacts
     img_pin = np.log(img_pin)
-    
+
     # get the slit corner
     cnrs = np.array(detect_slit_corners(img_pin))
-    
+
     # get the cropping location
-    _minrow, _maxrow = int(min(cnrs[:,0])), int(max(cnrs[:,0]))
-    _mincol, _maxcol = int(min(cnrs[:,1])), int(max(cnrs[:,1]))
-    
+    _minrow, _maxrow = int(min(cnrs[:, 0])), int(max(cnrs[:, 0]))
+    _mincol, _maxcol = int(min(cnrs[:, 1])), int(max(cnrs[:, 1]))
+
     # crop the img
     # NOTE: agressisve incropping to avoid the edge detection interference from slits
     _img = exposure.rescale_intensity(
-        img_pin[_minrow+incrop : _maxrow-incrop, 
-                _mincol+incrop : _maxcol-incrop]
+        img_pin[
+            _minrow + incrop : _maxrow - incrop, _mincol + incrop : _maxcol - incrop
+        ]
     )
-    
+
     # use canny + hough_line to get outline segment
     _img = medfilt2d(_img)
     _img = exposure.equalize_adapthist(_img, clip_limit=adapthist_clip)
@@ -381,23 +379,26 @@ def get_pin_outline(
     _cpus = max(multiprocessing.cpu_count() - 2, 2)
     with cf.ProcessPoolExecutor(max_workers=_cpus) as e:
         # schedule
-        _jobs = [e.submit(
-            probabilistic_hough_line,
-            _edges,
-            threshold=10,  
-            line_length=7,  # Increase the parameter to extract longer lines.
-            line_gap=2,     # Decrease the number to allow more short segments
-            ) for _ in range(upsampling)]
+        _jobs = [
+            e.submit(
+                probabilistic_hough_line,
+                _edges,
+                threshold=10,
+                line_length=7,  # Increase the parameter to extract longer lines.
+                line_gap=2,  # Decrease the number to allow more short segments
+            )
+            for _ in range(upsampling)
+        ]
         # # execute
         _lines = list(itertools.chain(*[me.result() for me in _jobs]))
-    
-    return [[(pt[0]++_mincol+incrop, pt[1]+_minrow+incrop) for pt in line] for line in _lines] 
+
+    return [
+        [(pt[0] + +_mincol + incrop, pt[1] + _minrow + incrop) for pt in line]
+        for line in _lines
+    ]
 
 
-def get_pin_tip(
-    img: np.ndarray, 
-    niter: int=12,
-    )->np.ndarray:
+def get_pin_tip(img: np.ndarray, niter: int = 12,) -> np.ndarray:
     """
     Description
     -----------
@@ -433,21 +434,35 @@ def get_pin_tip(
 
     # cluster line segments into 3 group
     # NOTE: better algorithm is needed to handle 1D data, using kmeans for now
-    thetas = [np.degrees(np.arctan2(abs(p1[1]-p0[1]), abs(p1[0]-p0[0]))) for p0,p1 in lines]
-    fv     = [(theta, theta) for theta in thetas]
-    lns    = [(p1[1]-p0[1])**2+(p1[0]-p0[0])**2 for p0,p1 in lines]
-    kmeans = KMeans(n_clusters=3, algorithm='full').fit(fv)
-    
+    thetas = [
+        np.degrees(np.arctan2(abs(p1[1] - p0[1]), abs(p1[0] - p0[0])))
+        for p0, p1 in lines
+    ]
+    fv = [(theta, theta) for theta in thetas]
+    lns = [(p1[1] - p0[1]) ** 2 + (p1[0] - p0[0]) ** 2 for p0, p1 in lines]
+    kmeans = KMeans(n_clusters=3, algorithm="full").fit(fv)
+
     # the tip should consist the shortest line collection
-    _linelen = [sum([ln for n, ln in enumerate(lns) if kmeans.labels_[n]==i]) for i in range(3)]
-    pts_tip  = list(itertools.chain(*[line for n, line in enumerate(lines) if kmeans.labels_[n]==_linelen.index(min(_linelen))]))
-    pts_tip  = get_center(pts_tip)
+    _linelen = [
+        sum([ln for n, ln in enumerate(lns) if kmeans.labels_[n] == i])
+        for i in range(3)
+    ]
+    pts_tip = list(
+        itertools.chain(
+            *[
+                line
+                for n, line in enumerate(lines)
+                if kmeans.labels_[n] == _linelen.index(min(_linelen))
+            ]
+        )
+    )
+    pts_tip = get_center(pts_tip)
 
     # cast the coordinate back to raster coordinate system
     return (pts_tip[1], pts_tip[0])
 
 
-def get_center(points2d:np.ndarray) -> np.ndarray:
+def get_center(points2d: np.ndarray) -> np.ndarray:
     """
     Description
     -----------
@@ -464,15 +479,16 @@ def get_center(points2d:np.ndarray) -> np.ndarray:
     np.ndarray
         Averaged center coordinates
     """
-    points2d = np.array(points2d)  
+    points2d = np.array(points2d)
     cnt = np.average(points2d, axis=0)
-    return np.average(points2d, weights=(1/np.sqrt(np.sum((points2d-cnt)**2, axis=1)))**2, axis=0)
+    return np.average(
+        points2d,
+        weights=(1 / np.sqrt(np.sum((points2d - cnt) ** 2, axis=1))) ** 2,
+        axis=0,
+    )
 
 
-def get_pin_vertical_offset(
-    img_0: np.ndarray, 
-    img_180: np.ndarray,
-    ) -> float:
+def get_pin_vertical_offset(img_0: np.ndarray, img_180: np.ndarray,) -> float:
     """
     Description
     -----------
@@ -510,7 +526,7 @@ def get_pin_vertical_offset(
 #     """
 #     Description
 #     -----------
-#     Using simple curve fitting to locate the rotation center of a 180-pair 
+#     Using simple curve fitting to locate the rotation center of a 180-pair
 #     image of pin during alignment
 
 #     Parameters
@@ -541,7 +557,7 @@ def get_pin_vertical_offset(
 
 #     # fit a two peak profile
 #     mod = GaussianModel(prefix='p1_') + GaussianModel(prefix='p2_')
-#     out = mod.fit(_prof, x=np.arange(_prof.shape[0]), 
+#     out = mod.fit(_prof, x=np.arange(_prof.shape[0]),
 #                   p1_center=np.argmax(_prof),
 #                   p2_center=np.argmin(_prof),
 #                 )
@@ -554,10 +570,8 @@ def get_pin_vertical_offset(
 
 
 def get_beam_origin(
-    img:np.ndarray, 
-    slit_cnrs:np.ndarray=None, 
-    size:Tuple=(500, 500),
-    ) -> Tuple:
+    img: np.ndarray, slit_cnrs: np.ndarray = None, size: Tuple = (500, 500),
+) -> Tuple:
     """
     Description
     -----------
@@ -588,62 +602,76 @@ def get_beam_origin(
         raise ValueError("FOV is way too large in horizontal direction")
     # get the domain size
     _srow, _scol = size
-    
+
     # detect slit corner is not provided
-    slit_cnrs = np.array(detect_slit_corners(img)) if slit_cnrs is None else np.array(slit_cnrs)
-    slit_top, slit_bot = int(min(slit_cnrs[:,0])), int(max(slit_cnrs[:,0]))
-    slit_lft, slit_rgt = int(min(slit_cnrs[:,1])), int(max(slit_cnrs[:,1]))
-        
+    slit_cnrs = (
+        np.array(detect_slit_corners(img)) if slit_cnrs is None else np.array(slit_cnrs)
+    )
+    slit_top, slit_bot = int(min(slit_cnrs[:, 0])), int(max(slit_cnrs[:, 0]))
+    slit_lft, slit_rgt = int(min(slit_cnrs[:, 1])), int(max(slit_cnrs[:, 1]))
+
     # avoid impact of noisy pixels (defects in detector)
     img = medfilt2d(img.astype(float))
-    
+
     # find the brightest spot in the image, use it as a starting point
-    _beamcenter = np.unravel_index(np.argmax(img, axis=None), img.shape)  # print(x_b, y_b, img[y_b, x_b])
-    
+    _beamcenter = np.unravel_index(
+        np.argmax(img, axis=None), img.shape
+    )  # print(x_b, y_b, img[y_b, x_b])
+
     # form bounds as contraints
     def _row_in_range(beamcenter):
-        return -1*(beamcenter[0]-slit_top+_srow/2)*(beamcenter[0]-slit_bot+_srow/2)
+        return (
+            -1
+            * (beamcenter[0] - slit_top + _srow / 2)
+            * (beamcenter[0] - slit_bot + _srow / 2)
+        )
+
     def _col_in_range(beamcenter):
-        return -1*(beamcenter[1]-slit_lft+_scol/2)*(beamcenter[1]-slit_rgt+_scol/2)
-    
+        return (
+            -1
+            * (beamcenter[1] - slit_lft + _scol / 2)
+            * (beamcenter[1] - slit_rgt + _scol / 2)
+        )
+
     # define objective function
     def _obj(beamcenter):
         _r, _c = beamcenter.astype(int)
-        _data = img[_r-_srow:_r+_srow, _c-_scol:_c+_scol]
-        
+        _data = img[_r - _srow : _r + _srow, _c - _scol : _c + _scol]
+
         _hp = np.average(_data, axis=0)
-        _hmod = GaussianModel(prefix='hp_')
-        _hfit = _hmod.fit(_hp, x=np.arange(_hp.shape[0]), hp_center=len(_hp)/2)
-        
+        _hmod = GaussianModel(prefix="hp_")
+        _hfit = _hmod.fit(_hp, x=np.arange(_hp.shape[0]), hp_center=len(_hp) / 2)
+
         _vp = np.average(_data, axis=1)
-        _vmod = GaussianModel(prefix='vp_')
-        _vfit = _vmod.fit(_vp, x=np.arange(_vp.shape[0]), vp_center=len(_vp)/2)
-        
+        _vmod = GaussianModel(prefix="vp_")
+        _vfit = _vmod.fit(_vp, x=np.arange(_vp.shape[0]), vp_center=len(_vp) / 2)
+
         # rms
         # minimizing the assymetry of the beam proflie in both directions to
         # the best we can.
-        # NOTE: 
+        # NOTE:
         #   The beam is not always symmetric, and we need (kind of) symmetric
         #   beam for ff-HEDM and nf-HEDM scan.
         return np.sqrt(
-              0.5*(_hfit.best_values['hp_center']- len(_hp)/2)**2 \
-            + 0.5*(_vfit.best_values['vp_center']- len(_vp)/2)**2
+            0.5 * (_hfit.best_values["hp_center"] - len(_hp) / 2) ** 2
+            + 0.5 * (_vfit.best_values["vp_center"] - len(_vp) / 2) ** 2
         )
-    
-    _rst = sp.optimize.minimize(_obj, _beamcenter,
-                               constraints=({'type': 'ineq', 'fun':  _row_in_range },
-                                            {'type': 'ineq', 'fun':  _col_in_range },
-                                           ),
-                               method='COBYLA',
-                              )
+
+    _rst = sp.optimize.minimize(
+        _obj,
+        _beamcenter,
+        constraints=(
+            {"type": "ineq", "fun": _row_in_range},
+            {"type": "ineq", "fun": _col_in_range},
+        ),
+        method="COBYLA",
+    )
     return _rst.x
 
 
 def fit_pin(
-    img_pin:    np.ndarray, 
-    img_white:  np.ndarray, 
-    side_mount: bool=False,
-    ) -> float:
+    img_pin: np.ndarray, img_white: np.ndarray, side_mount: bool = False,
+) -> float:
     """
     Description
     -----------
@@ -667,47 +695,59 @@ def fit_pin(
         fit the profile of the pin
     """
     _ax = 1 if side_mount else 0
-    
-    _pin = _safe_read_img(img_pin  ).astype(float)
-    _bg  = _safe_read_img(img_white).astype(float)
-    
+
+    _pin = _safe_read_img(img_pin).astype(float)
+    _bg = _safe_read_img(img_white).astype(float)
+
     # detect corners
     cnrs = np.array(detect_slit_corners(_pin))
-    l = int(cnrs[:,1].min())+13
-    r = int(cnrs[:,1].max())-13
-    t = int(cnrs[:,0].min())-13
-    b = int(cnrs[:,0].max())+13
-    
-    _pf_pin = np.average(_pin, axis=_ax)[t:b] if side_mount else np.average(_pin, axis=_ax)[l:r]
-    _pf_bg  = np.average(_bg,  axis=_ax)[t:b] if side_mount else np.average(_bg,  axis=_ax)[l:r]
-    
+    l = int(cnrs[:, 1].min()) + 13
+    r = int(cnrs[:, 1].max()) - 13
+    t = int(cnrs[:, 0].min()) - 13
+    b = int(cnrs[:, 0].max()) + 13
+
+    _pf_pin = (
+        np.average(_pin, axis=_ax)[t:b]
+        if side_mount
+        else np.average(_pin, axis=_ax)[l:r]
+    )
+    _pf_bg = (
+        np.average(_bg, axis=_ax)[t:b] if side_mount else np.average(_bg, axis=_ax)[l:r]
+    )
+
     # rescale bg to match pin image to counter
     # 1. beam intensity fluctuation
     # 2. exposure time change
     # 3. other artifacts that leads to sudden change in image intensity
-    _pf_bg = (_pf_bg-_pf_bg.min())/(_pf_bg.max()-_pf_bg.min())*(_pf_pin.max()-_pf_pin.min()) + _pf_pin.min()
-    
-    _pf = (_pf_bg**2 - _pf_pin**2)/_pf_bg**2
-    _pf[_pf<0] = 0
-    _pf = np.power(_pf/_pf.max(), 5)
-    
-    _mod = LorentzianModel(prefix='pin_')
-    _fit = _mod.fit(_pf, x=np.arange(_pf.shape[0]), pin_center= np.argmax(_pf))
-    
-    if 0<_fit.best_values['pin_center']<_pf.shape[0]:
-        return _fit.best_values['pin_center']+t if side_mount else _fit.best_values['pin_center']+l
+    _pf_bg = (_pf_bg - _pf_bg.min()) / (_pf_bg.max() - _pf_bg.min()) * (
+        _pf_pin.max() - _pf_pin.min()
+    ) + _pf_pin.min()
+
+    _pf = (_pf_bg ** 2 - _pf_pin ** 2) / _pf_bg ** 2
+    _pf[_pf < 0] = 0
+    _pf = np.power(_pf / _pf.max(), 5)
+
+    _mod = LorentzianModel(prefix="pin_")
+    _fit = _mod.fit(_pf, x=np.arange(_pf.shape[0]), pin_center=np.argmax(_pf))
+
+    if 0 < _fit.best_values["pin_center"] < _pf.shape[0]:
+        return (
+            _fit.best_values["pin_center"] + t
+            if side_mount
+            else _fit.best_values["pin_center"] + l
+        )
     else:
-        warnings.warn('Using Edge detection as backup, less accurate, might fail')
+        warnings.warn("Using Edge detection as backup, less accurate, might fail")
         peak = get_pin_tip(_safe_read_img(img_pin).astype(float))
         return peak[0] if side_mount else peak[1]
 
 
 def get_rotation_center(
-    img_pin_0: np.ndarray, 
-    img_pin_180: np.ndarray, 
-    img_white:np.ndarray, 
+    img_pin_0: np.ndarray,
+    img_pin_180: np.ndarray,
+    img_white: np.ndarray,
     side_mount=False,
-    ) -> float:
+) -> float:
     """
     Description
     -----------
@@ -728,7 +768,10 @@ def get_rotation_center(
     -------
     Rotation center in pixels 
     """
-    return 0.5*(fit_pin(img_pin_0, img_white, side_mount)+fit_pin(img_pin_180, img_white, side_mount))
+    return 0.5 * (
+        fit_pin(img_pin_0, img_white, side_mount)
+        + fit_pin(img_pin_180, img_white, side_mount)
+    )
 
 
 def _safe_read_img(img):
@@ -740,6 +783,6 @@ def _safe_read_img(img):
 
 
 if __name__ == "__main__":
-    projs = np.random.random((360,60,60))
-    thetas = np.linspace(0, np.pi*2, 360)
+    projs = np.random.random((360, 60, 60))
+    thetas = np.linspace(0, np.pi * 2, 360)
     detect_corrupted_proj(projs, thetas)
