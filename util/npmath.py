@@ -8,10 +8,7 @@ This module contains various simple mathmatical tools that can be used for diffe
 import numpy as np
 
 
-def solve_linear_equation(
-    expression: str, 
-    var: str='x',
-    )->float:
+def solve_linear_equation(expression: str, var: str = "x",) -> float:
     """
     Description
     -----------
@@ -28,10 +25,10 @@ def solve_linear_equation(
 
     """
     _complex = eval((expression.replace("=", "-(") + ")").replace(var, "1j"))
-    return -_complex.real/_complex.imag
+    return -_complex.real / _complex.imag
 
 
 if __name__ == "__main__":
     # Usage of solve_linear_equation
-    expr = 'x - 3*x - 46 = 10 - x'
+    expr = "x - 3*x - 46 = 10 - x"
     print(f"evaluating {expr} results to:\n{solve_linear_equation(expr)}")
