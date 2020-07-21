@@ -16,17 +16,26 @@ Options:
 
 import luigi
 import os
+import datetime
 from docopt import docopt
 
 
 ## --- Tomography Reconstruction --- ##
-
-
 class TomoMorph(luigi.Task):
     """Create a HDF archive from a set of TIFF files"""
+    date = luigi.DateIntervalParameter(default=datetime.date.today())
+    conf = luigi.Parameter(default='morph.yml')  # configuration for converting TIFF/RAW images into HDF5 archive
 
     def run(self):
-        pass
+        # lazy import
+        from tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
+        pack_tiff_to_hdf5(self.conf)
+        # write the marker file
+        with open(f'morph_complete_{date}.txt', 'w') as f:
+            f.write(f'TIFF -> HDF5 conversion finished at {datetime.datetime.now()}')
+
+    def output(self):
+        return luigi.LocalTarget(f'morph_complete_{date}.txt')
 
 
 class TomoRecon(luigi.Task):
