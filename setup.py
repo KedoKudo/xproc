@@ -2,7 +2,6 @@
 
 import glob
 import setuptools
-import tomoproc
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -10,13 +9,13 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="xproc",
     version="0.0.2",
-    scripts=["xprocer.py"],
+    scripts=["xproc/xprocer.py"],
     author="KedoKudo",
-    author_email="chenzhang8722@gmail.com",
-    description="Automated tomography reconstruction meta-package",
+    author_email="kedokudo@protonmail.com",
+    description="Data processing package for HT-HEDM instrument at Advanced Photon Source",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/KedoKudo/tomoproc.git",
+    url="https://github.com/KedoKudo/xproc.git",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
