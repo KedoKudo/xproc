@@ -10,14 +10,11 @@ import os
 import h5py
 import numpy as np
 from tifffile import imread
-from tomoproc.util.file import load_yaml
-from tomoproc.util.file import recursive_save_dict_to_h5group
-from tomoproc.util.logger import logger_default
-from tomoproc.util.logger import log_exception
-from tomoproc.util.memory import fit_in_memory
+from xproc.util.io import load_yaml
+from xproc.util.io import recursive_save_dict_to_h5group
+from xproc.util.memory import fit_in_memory
 
 
-@log_exception(logger_default)
 def pack_tiff_to_hdf5(fconfig: str) -> None:
     """
     Description
