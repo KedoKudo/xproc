@@ -116,7 +116,6 @@ def pack_tiff_to_hdf5(fconfig: str) -> None:
                     _dst[idx, :, :] = imread(os.path.join(fpath, _fn))
 
 
-@log_exception(logger_default)
 def pack_h5_to_hdf5(fconfig: str) -> None:
     """
     Description
@@ -140,5 +139,4 @@ def pack_h5_to_hdf5(fconfig: str) -> None:
 if __name__ == "__main__":
     # quick testing
     import sys
-
     pack_tiff_to_hdf5(sys.argv[1])
