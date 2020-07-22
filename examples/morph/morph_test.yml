@@ -45,7 +45,7 @@ tomo:
 #   the file_path need to be an absolute path to the location of the testing
 #   files
 morph:
-  file_path:   '/Users/chenzhang/Documents/Workbench/tomoproc/examples/morph'
+  file_path:   './'
   file_prefix: 'PUP_FF_SOFC_hires3_S2'
   file_format: 'tiff'
   numpadding:  5

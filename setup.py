@@ -8,9 +8,9 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="tomoproc",
+    name="xproc",
     version="0.0.2",
-    scripts=["tomoprocer.py"],
+    scripts=["xprocer.py"],
     author="KedoKudo",
     author_email="chenzhang8722@gmail.com",
     description="Automated tomography reconstruction meta-package",
