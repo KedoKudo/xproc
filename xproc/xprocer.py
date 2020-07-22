@@ -31,9 +31,10 @@ class TomoMorph(luigi.Task):
 
     def run(self):
         # lazy import
-        tomoproc.morph.tiff2h5.pack_tiff_to_hdf5(self.conf)
+        from xproc.tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
+        pack_tiff_to_hdf5(self.conf)
         # write the marker file
-        with open(f'morph_complete_{date}.txt', 'w') as f:
+        with open(f'morph_complete_{self.date}.txt', 'w') as f:
             f.write(f'TIFF -> HDF5 conversion finished at {datetime.datetime.now()}')
 
     def output(self):
