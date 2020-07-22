@@ -19,6 +19,9 @@ import os
 import datetime
 from docopt import docopt
 
+from xproc import tomoproc
+from xproc import ffproc 
+from xproc import nfproc
 
 ## --- Tomography Reconstruction --- ##
 class TomoMorph(luigi.Task):
@@ -28,14 +31,13 @@ class TomoMorph(luigi.Task):
 
     def run(self):
         # lazy import
-        from tomoproc.morph.tiff2h5 import pack_tiff_to_hdf5
-        pack_tiff_to_hdf5(self.conf)
+        tomoproc.morph.tiff2h5.pack_tiff_to_hdf5(self.conf)
         # write the marker file
         with open(f'morph_complete_{date}.txt', 'w') as f:
             f.write(f'TIFF -> HDF5 conversion finished at {datetime.datetime.now()}')
 
     def output(self):
-        return luigi.LocalTarget(f'morph_complete_{date}.txt')
+        return luigi.LocalTarget(f'morph_complete_{self.date}.txt')
 
 
 class TomoRecon(luigi.Task):
